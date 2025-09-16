@@ -2,16 +2,12 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8" />
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
-  <meta http-equiv="Pragma" content="no-cache" />
-  <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Inventaire Pied de Table</title>
   <style>
-    :root { --gap:12px; }
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;background:#fcfcfc;}
     .wrap{max-width:820px;margin:0 auto}
-    .card{border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,.04);background:#fff}
+    .card{border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.04);}
     h1{margin:0 0 16px 0}
     label{font-weight:600}
     input,select,button{padding:10px;border:1px solid #ddd;border-radius:12px}
@@ -35,7 +31,27 @@
     <div class="row">
       <div style="flex:1 1 260px">
         <label>Couleur</label><br>
-        <select id="colorSelect"></select>
+        <!-- Liste FIXE (toujours visible) -->
+        <select id="colorSelect">
+          <option value="Cactus">Cactus</option>
+          <option value="Capucine">Capucine</option>
+          <option value="Bleu Abysse">Bleu Abysse</option>
+          <option value="Anthracite">Anthracite</option>
+          <option value="Blanc Coton">Blanc Coton</option>
+          <option value="Réglisse">Réglisse</option>
+          <option value="Romarin">Romarin</option>
+          <option value="Tonka">Tonka</option>
+          <option value="Vert Cèdre">Vert Cèdre</option>
+          <option value="Vert Tilleul">Vert Tilleul</option>
+          <option value="Muscade">Muscade</option>
+          <option value="Carbone">Carbone</option>
+          <option value="Citron givré">Citron givré</option>
+          <option value="Gris argile">Gris argile</option>
+          <option value="Ocre rouge">Ocre rouge</option>
+          <option value="Orange confite">Orange confite</option>
+          <option value="Miel">Miel</option>
+          <option value="Pesto">Pesto</option>
+        </select>
       </div>
       <div>
         <label>Quantité de pieds</label><br>
@@ -46,7 +62,7 @@
       </div>
     </div>
     <div id="msg" class="msg"></div>
-    <p class="muted" style="margin:6px 0 0">Astuce : “Ajouter” met le stock de la couleur choisie **exactement** à la quantité saisie.</p>
+    <p class="muted" style="margin:6px 0 0">“Ajouter” met le stock Supabase de la couleur choisie <b>exactement</b> à la quantité saisie.</p>
   </div>
 
   <div class="card">
@@ -63,70 +79,20 @@ const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let colorList = [];     // [{id,name}]
-let stockByColor = new Map(); // name -> qty
+// Map noms -> id (chargée depuis la table colors)
+let colorIdByName = new Map();
+// Stock courant (chargé depuis la vue v_stock)
+let stockByName = new Map();
 
 function ok(t){ const m=document.getElementById('msg'); m.className='msg ok'; m.textContent=t; }
 function err(t){ const m=document.getElementById('msg'); m.className='msg err'; m.textContent=t; }
 
-async function loadColors(){
-  const { data, error } = await supabase.from('colors').select('id,name').order('name');
-  if(error){ err(error.message); return; }
-  colorList = data || [];
-  const sel = document.getElementById('colorSelect');
-  sel.innerHTML = colorList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+async function loadColorIds(){
+  const { data, error } = await supabase.from('colors').select('id,name');
+  if(error){ err("Lecture couleurs: " + error.message); return; }
+  colorIdByName = new Map((data||[]).map(c => [c.name, c.id]));
 }
 
 async function loadStock(){
   const { data, error } = await supabase.from('v_stock').select('*').order('color');
-  if(error){ err(error.message); return; }
-  const tbody = document.getElementById('stockBody');
-  tbody.innerHTML = (data||[]).map(r => {
-    const qty = r.qty_current ?? 0;
-    const cls = qty < 2 ? "low" : "";
-    return `<tr><td>${r.color}</td><td class="${cls}">${qty}</td></tr>`;
-  }).join('');
-  stockByColor = new Map((data||[]).map(r => [r.color, r.qty_current ?? 0]));
-}
-
-function getSelected(){
-  const sel = document.getElementById('colorSelect');
-  const id = Number(sel.value);
-  const name = sel.options[sel.selectedIndex]?.textContent || "";
-  return { id, name };
-}
-
-async function setExactQuantity(){
-  const { id, name } = getSelected();
-  const target = Number(document.getElementById('qtyInput').value);
-  if(!Number.isFinite(id)){ err("Choisis une couleur."); return; }
-  if(!Number.isFinite(target) || target < 0){ err("Entre une quantité valide (≥ 0)."); return; }
-  const current = stockByColor.get(name) ?? 0;
-  const delta = target - current;
-  if(delta === 0){ ok(`Le stock "${name}" est déjà à ${target}.`); return; }
-
-  // Appel de la fonction SQL apply_move(p_color_id, p_delta, p_note)
-  const { error } = await supabase.rpc('apply_move', { p_color_id: id, p_delta: delta, p_note: `MAJ directe à ${target}` });
-  if(error){ err(error.message); return; }
-
-  ok(`"${name}" : ${current} → ${target}`);
-  document.getElementById('qtyInput').value = "";
-  await loadStock();
-}
-
-document.getElementById('addBtn').addEventListener('click', setExactQuantity);
-
-(async function init(){
-  await loadColors();
-  await loadStock();
-
-  // Mise à jour en temps réel (si disponible)
-  try {
-    supabase.channel('stock_changes')
-      .on('postgres_changes', {event:'*', schema:'public', table:'legs_stock'}, loadStock)
-      .subscribe();
-  } catch(_) {}
-})();
-</script>
-</body>
-</html>
+  if(error){ err("Lecture stock: " +
