@@ -10,247 +10,122 @@
   <style>
     :root { --gap:12px; }
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;background:#fcfcfc;}
-    .wrap{max-width:980px;margin:0 auto}
+    .wrap{max-width:820px;margin:0 auto}
     .card{border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;box-shadow:0 2px 6px rgba(0,0,0,.04);background:#fff}
-    h1{margin:0 0 8px 0}
-    .topline{color:#444;margin:0 0 14px 0}
-    .grid{display:grid;grid-template-columns:1fr;gap:var(--gap)}
-    @media(min-width:940px){ .grid{grid-template-columns:1.25fr 1.25fr 1fr 1fr 1fr} }
-    button{padding:10px 14px;border:1px solid #ddd;border-radius:12px;background:#fff;cursor:pointer;transition:transform .02s ease}
+    h1{margin:0 0 16px 0}
+    label{font-weight:600}
+    input,select,button{padding:10px;border:1px solid #ddd;border-radius:12px}
+    button{cursor:pointer;background:#fff}
     button:hover{background:#f7f7f7}
-    button:active{transform:scale(0.98)}
-    select,input{padding:10px;border:1px solid #ddd;border-radius:12px}
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
     th{background:#fafafa}
-    td.lowstock{color:#a50000;font-weight:bold}
-    .msg{min-height:1.2em;margin-top:6px}
-    .ok{color:#0a7f2e}
-    .err{color:#a50000}
-    .muted{color:#777}
-    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-    .spacer{flex:1 1 auto}
-    .number{width:120px}
-    header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
-    header img{height:40px}
+    td.low{color:#a50000;font-weight:700}
+    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+    .msg{min-height:1.2em;margin-top:8px}
+    .ok{color:#0a7f2e}.err{color:#a50000}.muted{color:#777}
   </style>
   <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="wrap">
-
-  <header>
-    <!-- Logo Fermob si tu en veux un (mettre un lien image ici) -->
-    <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Fermob_logo.svg/2560px-Fermob_logo.svg.png" alt="Logo Fermob"> -->
-    <h1>Inventaire Pied de Table</h1>
-  </header>
-
-  <p class="topline">Choisissez la couleur puis soit utilisez les boutons +/−, soit entrez la <strong>quantité exacte</strong> que vous avez et cliquez sur « Définir le stock ».</p>
-
-  <div class="card">
-    <div class="grid">
-      <div>
-        <label>Couleur</label><br />
-        <select id="colorSelect"></select>
-      </div>
-
-      <div>
-        <label>Mouvements rapides</label><br />
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button data-delta="1">+1</button>
-          <button data-delta="5">+5</button>
-          <button data-delta="10">+10</button>
-          <button data-delta="-1">-1</button>
-          <button data-delta="-5">-5</button>
-          <button data-delta="-10">-10</button>
-        </div>
-      </div>
-
-      <div>
-        <label>Quantité perso (Δ)</label><br />
-        <input id="customQty" class="number" type="number" placeholder="ex : 12 ou -3" />
-        <div style="margin-top:8px">
-          <small class="muted">Δ relatif (ajoute ou retire)</small>
-        </div>
-      </div>
-
-      <div>
-        <label>Définir le stock exact</label><br />
-        <input id="absoluteQty" class="number" type="number" placeholder="ex : 20" />
-        <div style="margin-top:8px">
-          <button id="setAbsoluteBtn">Définir le stock</button>
-        </div>
-      </div>
-
-      <div>
-        <label>Commentaire</label><br />
-        <input id="note" type="text" placeholder="optionnel : lot, poste, etc." />
-        <div style="margin-top:12px">
-          <button id="applyBtn"><strong>Appliquer Δ</strong></button>
-          <div id="msg" class="msg"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+  <h1>Inventaire Pied de Table</h1>
 
   <div class="card">
     <div class="row">
-      <h3 style="margin:0">Stock par couleur</h3>
-      <div class="spacer"></div>
-      <button id="exportCsvBtn" title="Exporter l'historique des mouvements en CSV">Exporter l'historique (CSV)</button>
+      <div style="flex:1 1 260px">
+        <label>Couleur</label><br>
+        <select id="colorSelect"></select>
+      </div>
+      <div>
+        <label>Quantité de pieds</label><br>
+        <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px">
+      </div>
+      <div>
+        <button id="addBtn"><b>Ajouter</b></button>
+      </div>
     </div>
-    <table>
-      <thead><tr><th>Couleur</th><th>Stock actuel</th></tr></thead>
-      <tbody id="stockBody"></tbody>
-    </table>
+    <div id="msg" class="msg"></div>
+    <p class="muted" style="margin:6px 0 0">Astuce : “Ajouter” met le stock de la couleur choisie **exactement** à la quantité saisie.</p>
   </div>
 
   <div class="card">
-    <details open>
-      <summary>Historique (derniers mouvements)</summary>
-      <table>
-        <thead><tr><th>Date/heure</th><th>Couleur</th><th>Δ</th><th>Note</th></tr></thead>
-        <tbody id="lastMoves"></tbody>
-      </table>
-    </details>
+    <h3 style="margin:0 0 10px">Stock par couleur</h3>
+    <table>
+      <thead><tr><th>Couleur</th><th>Stock</th></tr></thead>
+      <tbody id="stockBody"></tbody>
+    </table>
   </div>
 </div>
 
 <script>
 const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
-
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-let stockMap = new Map();
 
-function showOk(t){ const m=document.getElementById('msg'); m.className='msg ok'; m.textContent=t; }
-function showErr(t){ const m=document.getElementById('msg'); m.className='msg err'; m.textContent=t; }
+let colorList = [];     // [{id,name}]
+let stockByColor = new Map(); // name -> qty
+
+function ok(t){ const m=document.getElementById('msg'); m.className='msg ok'; m.textContent=t; }
+function err(t){ const m=document.getElementById('msg'); m.className='msg err'; m.textContent=t; }
 
 async function loadColors(){
   const { data, error } = await supabase.from('colors').select('id,name').order('name');
-  if(error){ showErr(error.message); return; }
+  if(error){ err(error.message); return; }
+  colorList = data || [];
   const sel = document.getElementById('colorSelect');
-  sel.innerHTML = (data||[]).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  sel.innerHTML = colorList.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
 }
 
 async function loadStock(){
-  const { data, error } = await supabase.from('v_stock').select('*');
-  if(error){ showErr(error.message); return; }
-  document.getElementById('stockBody').innerHTML =
-    (data||[]).map(r => {
-      const qty = r.qty_current ?? 0;
-      const cls = qty < 2 ? "lowstock" : "";
-      return `<tr><td>${r.color}</td><td class="${cls}">${qty}</td></tr>`;
-    }).join('');
-  stockMap = new Map((data||[]).map(r => [r.color, r.qty_current ?? 0]));
+  const { data, error } = await supabase.from('v_stock').select('*').order('color');
+  if(error){ err(error.message); return; }
+  const tbody = document.getElementById('stockBody');
+  tbody.innerHTML = (data||[]).map(r => {
+    const qty = r.qty_current ?? 0;
+    const cls = qty < 2 ? "low" : "";
+    return `<tr><td>${r.color}</td><td class="${cls}">${qty}</td></tr>`;
+  }).join('');
+  stockByColor = new Map((data||[]).map(r => [r.color, r.qty_current ?? 0]));
 }
 
-async function loadLastMoves(limit=20){
-  const { data: moves } = await supabase.from('legs_moves')
-    .select('ts, color_id, delta, note')
-    .order('ts', { ascending:false })
-    .limit(limit);
-  const { data: cols } = await supabase.from('colors').select('id,name');
-  const byId = new Map((cols||[]).map(c => [c.id, c.name]));
-  document.getElementById('lastMoves').innerHTML =
-    (moves||[]).map(m => `
-      <tr>
-        <td>${new Date(m.ts).toLocaleString()}</td>
-        <td>${byId.get(m.color_id) || m.color_id}</td>
-        <td>${m.delta>0?'+':''}${m.delta}</td>
-        <td>${m.note||''}</td>
-      </tr>`).join('');
-}
-
-async function exportCSV(){
-  const { data: cols } = await supabase.from('colors').select('id,name');
-  const byId = new Map((cols||[]).map(c => [c.id, c.name]));
-
-  const { data: moves } = await supabase.from('legs_moves')
-    .select('ts, color_id, delta, note')
-    .order('ts', { ascending:true })
-    .limit(10000);
-
-  const header = ['date_heure','couleur','delta','note'];
-  const rows = (moves||[]).map(m => [
-    new Date(m.ts).toLocaleString(),
-    byId.get(m.color_id) || m.color_id,
-    (m.delta>0?'+':'') + m.delta,
-    (m.note||'').replaceAll('"','""')
-  ]);
-  let csv = '\ufeff' + header.join(';') + '\n' + rows.map(r => r.map(v => {
-    const s = String(v);
-    if(s.includes(';') || s.includes('"') || s.includes('\n')){
-      return '"' + s.replaceAll('"','""') + '"';
-    }
-    return s;
-  }).join(';')).join('\n');
-
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'historique_pieds.csv';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showOk('Export CSV généré.');
-}
-
-async function applyDelta(delta){
+function getSelected(){
   const sel = document.getElementById('colorSelect');
-  if(!sel.value){ showErr('Choisis une couleur.'); return; }
-  const colorId = Number(sel.value);
-  const note = document.getElementById('note').value || null;
-  const { error } = await supabase.rpc('apply_move', { p_color_id: colorId, p_delta: delta, p_note: note });
-  if(error){ showErr(error.message); }
-  else { showOk('Mouvement appliqué.'); await loadStock(); await loadLastMoves(); document.getElementById('customQty').value=''; }
+  const id = Number(sel.value);
+  const name = sel.options[sel.selectedIndex]?.textContent || "";
+  return { id, name };
 }
 
-async function setAbsolute(){
-  const sel = document.getElementById('colorSelect');
-  if(!sel.value){ showErr('Choisis une couleur.'); return; }
-  const colorId = Number(sel.value);
-  const colorName = sel.options[sel.selectedIndex].textContent;
-  const current = stockMap.get(colorName) ?? 0;
-
-  const target = Number(document.getElementById('absoluteQty').value);
-  if(!Number.isFinite(target) || target < 0){ showErr('Entre une quantité valide (>= 0).'); return; }
+async function setExactQuantity(){
+  const { id, name } = getSelected();
+  const target = Number(document.getElementById('qtyInput').value);
+  if(!Number.isFinite(id)){ err("Choisis une couleur."); return; }
+  if(!Number.isFinite(target) || target < 0){ err("Entre une quantité valide (≥ 0)."); return; }
+  const current = stockByColor.get(name) ?? 0;
   const delta = target - current;
-  if(delta === 0){ showOk('Déjà à ' + target + '.'); return; }
-  const note = document.getElementById('note').value || null;
-  const { error } = await supabase.rpc('apply_move', { p_color_id: colorId, p_delta: delta, p_note: note });
-  if(error){ showErr(error.message); }
-  else { showOk(`Stock ${colorName}: ${current} → ${target} (Δ ${delta>0?'+':''}${delta})`); await loadStock(); await loadLastMoves(); document.getElementById('absoluteQty').value=''; }
+  if(delta === 0){ ok(`Le stock "${name}" est déjà à ${target}.`); return; }
+
+  // Appel de la fonction SQL apply_move(p_color_id, p_delta, p_note)
+  const { error } = await supabase.rpc('apply_move', { p_color_id: id, p_delta: delta, p_note: `MAJ directe à ${target}` });
+  if(error){ err(error.message); return; }
+
+  ok(`"${name}" : ${current} → ${target}`);
+  document.getElementById('qtyInput').value = "";
+  await loadStock();
 }
 
-document.addEventListener('click',(e)=>{
-  if(e.target.matches('button[data-delta]')){
-    const d = Number(e.target.getAttribute('data-delta'));
-    applyDelta(d);
-  }
-});
-document.getElementById('applyBtn').addEventListener('click', ()=>{
-  const v = Number(document.getElementById('customQty').value);
-  if(!Number.isFinite(v) || v===0){ showErr('Saisis une quantité non nulle.'); return; }
-  applyDelta(v);
-});
-document.getElementById('setAbsoluteBtn').addEventListener('click', setAbsolute);
-document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
+document.getElementById('addBtn').addEventListener('click', setExactQuantity);
 
 (async function init(){
   await loadColors();
   await loadStock();
-  await loadLastMoves();
+
+  // Mise à jour en temps réel (si disponible)
   try {
-    supabase.channel('stock-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'legs_stock' }, loadStock)
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'legs_moves' }, () => loadLastMoves())
+    supabase.channel('stock_changes')
+      .on('postgres_changes', {event:'*', schema:'public', table:'legs_stock'}, loadStock)
       .subscribe();
-  } catch (e) {
-    console.warn('Temps réel non actif:', e);
-  }
+  } catch(_) {}
 })();
 </script>
 </body>
