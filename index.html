@@ -95,4 +95,64 @@ async function loadColorIds(){
 
 async function loadStock(){
   const { data, error } = await supabase.from('v_stock').select('*').order('color');
-  if(error){ err("Lecture stock: " +
+  if(error){ err("Lecture stock: " + error.message); return; }
+  stockByName = new Map((data||[]).map(r => [r.color, r.qty_current ?? 0]));
+  const tbody = document.getElementById('stockBody');
+  tbody.innerHTML = (data||[]).map(r => {
+    const qty = r.qty_current ?? 0;
+    const cls = qty < 2 ? "low" : "";
+    return `<tr><td>${r.color}</td><td class="${cls}">${qty}</td></tr>`;
+  }).join('');
+}
+
+// Trouve l'id de la couleur; si absente en base, on explique quoi faire
+function getColorIdOrExplain(colorName){
+  const id = colorIdByName.get(colorName);
+  if(!id){
+    err(`La couleur "${colorName}" n'existe pas encore dans la table Supabase "colors". Ajoute-la via SQL :
+insert into public.colors(name) values ('${colorName}') on conflict do nothing;`);
+    return null;
+  }
+  return id;
+}
+
+async function setExactQuantity(){
+  const sel = document.getElementById('colorSelect');
+  const colorName = sel.value;
+  const target = Number(document.getElementById('qtyInput').value);
+  if(!colorName){ err("Choisis une couleur."); return; }
+  if(!Number.isFinite(target) || target < 0){ err("Entre une quantité valide (≥ 0)."); return; }
+
+  // récupérer l'id de la couleur
+  const colorId = getColorIdOrExplain(colorName);
+  if(!colorId) return;
+
+  // stock actuel connu
+  const current = stockByName.get(colorName) ?? 0;
+  const delta = target - current;
+  if(delta === 0){ ok(`Le stock "${colorName}" est déjà à ${target}.`); return; }
+
+  const { error } = await supabase.rpc('apply_move', { p_color_id: colorId, p_delta: delta, p_note: `MAJ directe à ${target}` });
+  if(error){ err("Écriture stock: " + error.message); return; }
+
+  ok(`"${colorName}" : ${current} → ${target}`);
+  document.getElementById('qtyInput').value = "";
+  await loadStock();
+}
+
+document.getElementById('addBtn').addEventListener('click', setExactQuantity);
+
+(async function init(){
+  await loadColorIds();  // nécessaire pour connaître les ids
+  await loadStock();
+
+  // Temps réel sur legs_stock
+  try {
+    supabase.channel('stock_changes')
+      .on('postgres_changes', {event:'*', schema:'public', table:'legs_stock'}, loadStock)
+      .subscribe();
+  } catch(_) {}
+})();
+</script>
+</body>
+</html>
