@@ -6,7 +6,7 @@
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Inventaire des pieds de table – Fermob</title>
+  <title>Inventaire Pied de Table</title>
   <style>
     :root { --gap:12px; }
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;background:#fcfcfc;}
@@ -23,6 +23,7 @@
     table{width:100%;border-collapse:collapse}
     th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
     th{background:#fafafa}
+    td.lowstock{color:#a50000;font-weight:bold}
     .msg{min-height:1.2em;margin-top:6px}
     .ok{color:#0a7f2e}
     .err{color:#a50000}
@@ -30,12 +31,20 @@
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
     .spacer{flex:1 1 auto}
     .number{width:120px}
+    header{display:flex;align-items:center;gap:12px;margin-bottom:24px}
+    header img{height:40px}
   </style>
   <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="wrap">
-  <h1>inventaire des pied de table part couleur</h1>
+
+  <header>
+    <!-- Logo Fermob si tu en veux un (mettre un lien image ici) -->
+    <!-- <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/4a/Fermob_logo.svg/2560px-Fermob_logo.svg.png" alt="Logo Fermob"> -->
+    <h1>Inventaire Pied de Table</h1>
+  </header>
+
   <p class="topline">Choisissez la couleur puis soit utilisez les boutons +/−, soit entrez la <strong>quantité exacte</strong> que vous avez et cliquez sur « Définir le stock ».</p>
 
   <div class="card">
@@ -50,8 +59,10 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button data-delta="1">+1</button>
           <button data-delta="5">+5</button>
+          <button data-delta="10">+10</button>
           <button data-delta="-1">-1</button>
           <button data-delta="-5">-5</button>
+          <button data-delta="-10">-10</button>
         </div>
       </div>
 
@@ -126,16 +137,19 @@ async function loadStock(){
   const { data, error } = await supabase.from('v_stock').select('*');
   if(error){ showErr(error.message); return; }
   document.getElementById('stockBody').innerHTML =
-    (data||[]).map(r => `<tr><td>${r.color}</td><td>${r.qty_current ?? 0}</td></tr>`).join('');
+    (data||[]).map(r => {
+      const qty = r.qty_current ?? 0;
+      const cls = qty < 2 ? "lowstock" : "";
+      return `<tr><td>${r.color}</td><td class="${cls}">${qty}</td></tr>`;
+    }).join('');
   stockMap = new Map((data||[]).map(r => [r.color, r.qty_current ?? 0]));
 }
 
 async function loadLastMoves(limit=20){
-  const { data: moves, error } = await supabase.from('legs_moves')
+  const { data: moves } = await supabase.from('legs_moves')
     .select('ts, color_id, delta, note')
     .order('ts', { ascending:false })
     .limit(limit);
-  if(error){ return; }
   const { data: cols } = await supabase.from('colors').select('id,name');
   const byId = new Map((cols||[]).map(c => [c.id, c.name]));
   document.getElementById('lastMoves').innerHTML =
@@ -208,7 +222,7 @@ async function setAbsolute(){
   const note = document.getElementById('note').value || null;
   const { error } = await supabase.rpc('apply_move', { p_color_id: colorId, p_delta: delta, p_note: note });
   if(error){ showErr(error.message); }
-  else { showOk(\`Stock \${colorName}: \${current} → \${target} (Δ \${delta>0?'+':''}\${delta})\`); await loadStock(); await loadLastMoves(); document.getElementById('absoluteQty').value=''; }
+  else { showOk(`Stock ${colorName}: ${current} → ${target} (Δ ${delta>0?'+':''}${delta})`); await loadStock(); await loadLastMoves(); document.getElementById('absoluteQty').value=''; }
 }
 
 document.addEventListener('click',(e)=>{
@@ -229,7 +243,6 @@ document.getElementById('exportCsvBtn').addEventListener('click', exportCSV);
   await loadColors();
   await loadStock();
   await loadLastMoves();
-
   try {
     supabase.channel('stock-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'legs_stock' }, loadStock)
