@@ -18,20 +18,24 @@
     th{background:#fafafa}
     td.low{color:#a50000;font-weight:700}
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
-    .msg{min-height:1.2em;margin-top:8px;white-space:pre-line}
-    .ok{color:#0a7f2e}.err{color:#a50000}.muted{color:#777}
+    .msg{min-height:1.4em;margin-top:8px;white-space:pre-line}
+    .ok{color:#0a7f2e}.err{color:#a50000}.muted{color:#555}
+    .banner{padding:10px;border-radius:10px;margin-bottom:12px}
+    .banner.err{background:#ffecec;border:1px solid #ffb4b4;color:#900}
+    .banner.ok{background:#ecfff0;border:1px solid #b4ffca;color:#074}
   </style>
-  <script defer src="https://unpkg.com/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div class="wrap">
   <h1>Inventaire Pied de Table</h1>
 
+  <div id="libStatus" class="banner" style="display:none;"></div>
+
   <div class="card">
     <div class="row">
       <div style="flex:1 1 260px">
         <label>Couleur</label><br>
-        <!-- Liste FIXE (toujours visible) -->
+        <!-- Liste FIXE + on fusionnera avec celles de Supabase -->
         <select id="colorSelect">
           <option value="Cactus">Cactus</option>
           <option value="Capucine">Capucine</option>
@@ -74,74 +78,93 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
 const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function msgOk(t){ const m=document.getElementById('msg'); m.className='msg ok'; m.textContent=t; }
-function msgErr(t){ const m=document.getElementById('msg'); m.className='msg err'; m.textContent=t; }
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+function setBanner(ok, text){
+  const b = document.getElementById('libStatus');
+  b.style.display = 'block';
+  b.className = 'banner ' + (ok ? 'ok' : 'err');
+  b.textContent = text;
+}
+function setMsg(cls, text){
+  const m = document.getElementById('msg');
+  m.className = 'msg ' + cls;
+  m.textContent = text;
+}
 
 async function mergeColorsIntoDropdown(){
-  const sel = document.getElementById('colorSelect');
-  const existing = new Set(Array.from(sel.options).map(o => o.value));
-  const { data, error } = await supabase.from('colors').select('name').order('name');
-  if(error){ msgErr("Lecture couleurs: " + error.message); return; }
-  for(const row of (data||[])){
-    if(!existing.has(row.name)){
-      const opt = document.createElement('option');
-      opt.value = row.name; opt.textContent = row.name;
-      sel.appendChild(opt);
+  try{
+    const sel = document.getElementById('colorSelect');
+    const existing = new Set(Array.from(sel.options).map(o => o.value));
+    const { data, error } = await supabase.from('colors').select('name').order('name');
+    if(error){ setMsg('err', "Lecture couleurs: " + error.message); return; }
+    for(const row of (data||[])){
+      if(!existing.has(row.name)){
+        const opt = document.createElement('option');
+        opt.value = row.name; opt.textContent = row.name;
+        sel.appendChild(opt);
+      }
     }
-  }
+  }catch(e){ setMsg('err', 'Erreur couleurs: ' + e.message); }
 }
 
 async function loadStock(){
-  const { data, error } = await supabase.from('v_stock').select('*').order('color');
-  if(error){ msgErr("Lecture stock: " + error.message); return; }
-  const tbody = document.getElementById('stockBody');
-  tbody.innerHTML = (data||[]).map(r => {
-    const qty = r.qty_current ?? 0;
-    const cls = qty < 2 ? "low" : "";
-    return `<tr><td>${r.color}</td><td class="${cls}">${qty}</td></tr>`;
-  }).join('');
-  msgOk("Stock chargé.");
+  try{
+    const { data, error } = await supabase.from('v_stock').select('*').order('color');
+    if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
+    const tbody = document.getElementById('stockBody');
+    tbody.innerHTML = (data||[]).map(r => {
+      const qty = r.qty_current ?? 0;
+      const cls = qty < 2 ? "low" : "";
+      return `<tr><td>${r.color}</td><td class="${cls}">${qty}</td></tr>`;
+    }).join('');
+    setMsg('ok', "Stock chargé.");
+  }catch(e){ setMsg('err', 'Erreur stock: ' + e.message); }
 }
 
 async function setExactQuantity(){
+  setMsg('muted', "⏳ Début…");
   const colorName = document.getElementById('colorSelect').value;
   const target = Number(document.getElementById('qtyInput').value);
-  if(!colorName){ msgErr("Choisis une couleur."); return; }
-  if(!Number.isFinite(target) || target < 0){ msgErr("Entre une quantité valide (≥ 0)."); return; }
+  if(!colorName){ setMsg('err', "❌ Choisis une couleur."); return; }
+  if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Entre une quantité valide (≥ 0)."); return; }
 
-  // Récupérer l'id de la couleur
+  // Récup id couleur
+  setMsg('muted', `⏳ Recherche id pour « ${colorName} »…`);
   const { data: cdata, error: cerr } = await supabase.from('colors').select('id').eq('name', colorName).maybeSingle();
-  if(cerr){ msgErr("Lecture couleur: " + cerr.message); return; }
-  if(!cdata){ msgErr(`Couleur absente en base : ${colorName}`); return; }
+  if(cerr){ setMsg('err', "❌ Lecture couleur: " + cerr.message); return; }
+  if(!cdata){ setMsg('err', `❌ Couleur absente en base: ${colorName}`); return; }
   const colorId = cdata.id;
 
-  // Lire le stock actuel pour calculer Δ
+  // Lire stock actuel
   const { data: vs, error: verr } = await supabase.from('v_stock').select('qty_current').eq('color', colorName).maybeSingle();
-  if(verr){ msgErr("Lecture stock actuel: " + verr.message); return; }
+  if(verr){ setMsg('err', "❌ Lecture stock actuel: " + verr.message); return; }
   const current = vs?.qty_current ?? 0;
   const delta = target - current;
-  if(delta === 0){ msgOk(`« ${colorName} » est déjà à ${target}.`); return; }
+  if(delta === 0){ setMsg('ok', `✅ « ${colorName} » est déjà à ${target}.`); return; }
 
-  // Appliquer le mouvement via la fonction
+  // Appliquer mouvement
+  setMsg('muted', `⏳ Application du mouvement (Δ ${delta>0?'+':''}${delta})…`);
   const { error: rerr } = await supabase.rpc('apply_move', { p_color_id: colorId, p_delta: delta, p_note: `MAJ directe à ${target}` });
-  if(rerr){ msgErr("Écriture stock: " + rerr.message); return; }
+  if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message); return; }
 
-  msgOk(`« ${colorName} » : ${current} → ${target}`);
-  document.getElementById('qtyInput').value = "";
+  setMsg('ok', `✅ « ${colorName} » : ${current} → ${target}`);
+  (document.getElementById('qtyInput').value = "");
   await loadStock();
 }
 
 document.getElementById('addBtn').addEventListener('click', setExactQuantity);
 
 (async function init(){
-  await mergeColorsIntoDropdown(); // ajoute les couleurs manquantes depuis Supabase
+  setBanner(true, "✅ Module Supabase chargé via esm.sh");
+  await mergeColorsIntoDropdown();
   await loadStock();
-  // temps réel sur legs_stock
   try {
     supabase.channel('stock_changes')
       .on('postgres_changes', {event:'*', schema:'public', table:'legs_stock'}, loadStock)
