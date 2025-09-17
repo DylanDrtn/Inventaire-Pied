@@ -20,41 +20,23 @@
     .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
     .msg{min-height:1.4em;margin-top:8px;white-space:pre-line}
     .ok{color:#0a7f2e}.err{color:#a50000}.muted{color:#555}
-    .banner{padding:10px;border-radius:10px;margin-bottom:12px}
-    .banner.err{background:#ffecec;border:1px solid #ffb4b4;color:#900}
-    .banner.ok{background:#ecfff0;border:1px solid #b4ffca;color:#074}
+    .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+    .header .logo{height:40px;}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Inventaire Pied de Table</h1>
-
-  <div id="libStatus" class="banner" style="display:none;"></div>
+  <div class="header">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png" alt="Fermob" class="logo">
+    <h1>Inventaire Pied de Table</h1>
+  </div>
 
   <div class="card">
     <div class="row">
       <div style="flex:1 1 260px">
         <label>Couleur</label><br>
-        <!-- Liste FIXE + on fusionnera avec celles de Supabase -->
         <select id="colorSelect">
-          <option value="Cactus">Cactus</option>
-          <option value="Capucine">Capucine</option>
-          <option value="Bleu Abysse">Bleu Abysse</option>
-          <option value="Anthracite">Anthracite</option>
-          <option value="Blanc Coton">Blanc Coton</option>
-          <option value="Réglisse">Réglisse</option>
-          <option value="Romarin">Romarin</option>
-          <option value="Tonka">Tonka</option>
-          <option value="Vert Cèdre">Vert Cèdre</option>
-          <option value="Vert Tilleul">Vert Tilleul</option>
-          <option value="Muscade">Muscade</option>
-          <option value="Carbone">Carbone</option>
-          <option value="Citron givré">Citron givré</option>
-          <option value="Gris argile">Gris argile</option>
-          <option value="Ocre rouge">Ocre rouge</option>
-          <option value="Orange confite">Orange confite</option>
-          <option value="Miel">Miel</option>
-          <option value="Pesto">Pesto</option>
+          <!-- sera rempli et dédupliqué -->
         </select>
       </div>
       <div>
@@ -85,7 +67,7 @@ const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ---------- helpers ---------- */
+// Helpers
 const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
 const title = s => (s||"")
   .toLowerCase()
@@ -98,26 +80,19 @@ function setMsg(cls, text){
   m.textContent = text;
 }
 
-/* ---------- construit une liste UNIQUE pour le menu ---------- */
+// Construit un menu déroulant unique (sans doublons)
 async function buildUniqueDropdown(){
   const sel = document.getElementById('colorSelect');
-
-  // 1) récupère les noms venant du HTML actuel
-  const fixed = Array.from(sel.options).map(o => o.value);
-
-  // 2) récupère les noms venant de Supabase
   const { data: rows, error } = await supabase.from('colors').select('name');
-  const fromDb = error ? [] : (rows||[]).map(r => r.name);
+  if(error){ setMsg('err', "Lecture couleurs: " + error.message); return; }
 
-  // 3) fusion + dédoublonnage (insensible à la casse/espaces)
-  const byKey = new Map(); // key normalisée -> libellé d'affichage
-  for(const n of [...fixed, ...fromDb]){
-    const k = norm(n);
+  const byKey = new Map();
+  for(const r of (rows||[])){
+    const k = norm(r.name);
     if(!k) continue;
-    if(!byKey.has(k)) byKey.set(k, title(n));
+    if(!byKey.has(k)) byKey.set(k, title(r.name));
   }
 
-  // 4) remplit le <select> proprement (trié)
   sel.innerHTML = '';
   [...byKey.values()].sort((a,b)=>a.localeCompare(b))
     .forEach(name => {
@@ -127,13 +102,12 @@ async function buildUniqueDropdown(){
     });
 }
 
-/* ---------- charge le stock en DÉDOUBLONNANT ---------- */
+// Charge le stock et dédoublonne
 async function loadStock(){
   const { data, error } = await supabase.from('v_stock').select('*');
   if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
 
-  // groupe par nom normalisé et cumule les quantités
-  const grouped = new Map(); // key -> {name, qty}
+  const grouped = new Map();
   for(const r of (data||[])){
     const key = norm(r.color);
     const name = title(r.color);
@@ -153,7 +127,7 @@ async function loadStock(){
   setMsg('ok', "Stock chargé.");
 }
 
-/* ---------- “Ajouter” : met exactement la quantité demandée ---------- */
+// Ajouter / maj exacte
 async function setExactQuantity(){
   setMsg('muted', "⏳ Début…");
   const colorName = document.getElementById('colorSelect').value;
@@ -162,14 +136,12 @@ async function setExactQuantity(){
   if(!colorName){ setMsg('err', "❌ Choisis une couleur."); return; }
   if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Entre une quantité valide (≥ 0)."); return; }
 
-  // retrouve l'id dans la base en tolérant la casse
   const { data: cdata, error: cerr } = await supabase.from('colors')
     .select('id,name').ilike('name', colorName).maybeSingle();
   if(cerr){ setMsg('err', "❌ Lecture couleur: " + cerr.message); return; }
   if(!cdata){ setMsg('err', `❌ Couleur absente en base: ${colorName}`); return; }
   const colorId = cdata.id;
 
-  // lit le stock actuel (fusionné)
   const { data: vs } = await supabase.from('v_stock').select('color, qty_current');
   const current = (vs||[]).filter(r => norm(r.color) === norm(colorName))
                           .reduce((sum,r)=>sum+(r.qty_current||0), 0);
@@ -185,7 +157,7 @@ async function setExactQuantity(){
   await loadStock();
 }
 
-/* ---------- events & init ---------- */
+// Events + init
 document.getElementById('addBtn').addEventListener('click', setExactQuantity);
 
 (async function init(){
