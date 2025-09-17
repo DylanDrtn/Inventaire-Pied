@@ -6,18 +6,10 @@
   <title>Inventaire Pied de Table</title>
   <style>
     :root{
-      --brand:#5a7d3a;          /* vert cactus */
-      --brand-600:#4f7133;
-      --brand-700:#44652d;
-      --brand-50:#f0f6ec;
-      --text:#1f2937;
-      --muted:#6b7280;
-      --danger:#a50000;
-      --card:#ffffff;
-      --line:#e5e7eb;
+      --brand:#5a7d3a; --brand-600:#4f7133; --brand-700:#44652d; --brand-50:#f0f6ec;
+      --text:#1f2937; --muted:#6b7280; --danger:#a50000; --card:#ffffff; --line:#e5e7eb;
     }
     *{box-sizing:border-box}
-    /* --- FOND DE PAGE (motif discret + teinte) --- */
     body{
       margin:0; color:var(--text);
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
@@ -26,51 +18,27 @@
         radial-gradient(rgba(90,125,58,.05) 1px, transparent 1px) 9px 9px/18px 18px,
         #f7faf5;
     }
-
-    /* --- BARRE HAUT --- */
-    .topbar{
-      background:linear-gradient(0deg,var(--brand-600),var(--brand));
-      color:#fff; padding:14px 0;
-      position:sticky; top:0; z-index:10;
-      box-shadow:0 2px 6px rgba(0,0,0,.15);
-    }
+    .topbar{background:linear-gradient(0deg,var(--brand-600),var(--brand));color:#fff;padding:14px 0;position:sticky;top:0;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.15)}
     .wrap{max-width:980px;margin:0 auto;padding:0 16px}
-
     .header{display:flex;align-items:center;gap:14px}
     .logo{height:42px;width:auto;object-fit:contain;display:block}
-    .logo--invert{filter:brightness(0) invert(1)} /* rend blanc si logo sombre */
-    .logo-text{
-      display:none; font-weight:800; letter-spacing:.3px; font-size:22px;
-    }
-    h1{margin:0; font-weight:700; letter-spacing:.2px; font-size:20px}
-
-    /* --- CONTENU --- */
+    .logo--invert{filter:brightness(0) invert(1)}
+    .logo-text{display:none;font-weight:800;letter-spacing:.3px;font-size:22px}
+    h1{margin:0;font-weight:700;letter-spacing:.2px;font-size:20px}
     .content{padding:20px 16px}
-    .card{
-      border:1px solid var(--line);
-      border-radius:16px; padding:16px; margin-bottom:16px;
-      background:var(--card); box-shadow:0 2px 10px rgba(0,0,0,.05);
-    }
+    .card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;background:var(--card);box-shadow:0 2px 10px rgba(0,0,0,.05)}
     label{font-weight:600}
-    input,select{
-      padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;
-    }
-    button{
-      padding:10px 14px;border:1px solid var(--brand-600);
-      border-radius:12px;background:var(--brand);color:#fff;cursor:pointer;
-      transition:transform .02s ease, background .15s;
-    }
-    button:hover{background:var(--brand-600)}
-    button:active{transform:scale(.98)}
-
+    input,select{padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+    button{padding:10px 14px;border:1px solid var(--brand-600);border-radius:12px;background:var(--brand);color:#fff;cursor:pointer;transition:transform .02s ease, background .15s}
+    button:hover{background:var(--brand-600)} button:active{transform:scale(.98)}
     table{width:100%;border-collapse:collapse;background:#fff}
     th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
     th{background:var(--brand-50)}
     td.low{color:var(--danger);font-weight:700}
-
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
     .msg{min-height:1.4em;margin-top:8px;white-space:pre-line}
     .ok{color:#0a7f2e}.err{color:var(--danger)}.muted{color:var(--muted)}
+    .ref{font-size:12px;color:var(--muted);margin-top:6px}
   </style>
 </head>
 <body>
@@ -79,7 +47,6 @@
   <div class="topbar">
     <div class="wrap">
       <div class="header">
-        <!-- Le JS ci-dessous choisira la meilleure source pour le logo -->
         <img id="logoImg" class="logo logo--invert" alt="Fermob" src="" />
         <span id="logoText" class="logo-text">Fermob</span>
         <h1>Inventaire Pied de Table</h1>
@@ -97,10 +64,21 @@
             <label>Couleur</label><br>
             <select id="colorSelect"><!-- rempli dynamiquement --></select>
           </div>
+
+          <div style="flex:1 1 220px">
+            <label>Type de pied</label><br>
+            <select id="typeSelect">
+              <option value="Petite table">Petite table</option>
+              <option value="Grande table">Grande table</option>
+            </select>
+            <div id="refBox" class="ref"></div>
+          </div>
+
           <div>
             <label>Quantité de pieds</label><br>
             <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px">
           </div>
+
           <div>
             <button id="addBtn"><b>Ajouter</b></button>
           </div>
@@ -110,9 +88,9 @@
       </div>
 
       <div class="card">
-        <h3 style="margin:0 0 10px">Stock par couleur</h3>
+        <h3 style="margin:0 0 10px">Stock par couleur et type</h3>
         <table>
-          <thead><tr><th>Couleur</th><th>Stock</th></tr></thead>
+          <thead><tr><th>Couleur</th><th>Type</th><th>Référence</th><th>Stock</th></tr></thead>
           <tbody id="stockBody"></tbody>
         </table>
       </div>
@@ -127,32 +105,34 @@ const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-/* ====== Gestion du LOGO (triple fallback) ====== */
+/* LOGO (local -> wiki -> texte) */
 (async function loadLogo(){
   const logoEl = document.getElementById('logoImg');
   const textEl = document.getElementById('logoText');
-  // 1) Essaye logo local (si tu ajoutes "logo.png" à la racine du repo)
-  const local = 'logo.png';
   try{
-    const res = await fetch(local, { method:'HEAD', cache:'no-store' });
-    if(res.ok){
-      logoEl.src = local;
-      logoEl.classList.remove('logo--invert'); // assume déjà sur fond vert
-      return;
-    }
+    const r = await fetch('logo.png', {method:'HEAD', cache:'no-store'});
+    if(r.ok){ logoEl.src='logo.png'; logoEl.classList.remove('logo--invert'); return; }
   }catch(_){}
-  // 2) Sinon, essaie Wikipédia
-  const wiki = 'https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png';
-  logoEl.onerror = () => { logoEl.style.display='none'; textEl.style.display='inline-block'; };
-  logoEl.src = wiki;
+  logoEl.onerror = ()=>{ logoEl.style.display='none'; textEl.style.display='inline-block'; };
+  logoEl.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png';
 })();
 
-/* ====== Helpers ====== */
+/* Helpers */
 const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
 const title = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
 function setMsg(cls, text){ const m=document.getElementById('msg'); m.className='msg '+cls; m.textContent=text; }
 
-/* Menu unique (sans doublons) */
+/* Références par type */
+const TYPE_REFS = {
+  "Petite table": "14x8 / 8x8",
+  "Grande table": "165x10 / 207x10"
+};
+function refreshRefBox(){
+  const t = document.getElementById('typeSelect').value;
+  document.getElementById('refBox').textContent = "Réf : " + (TYPE_REFS[t] || "-");
+}
+
+/* Menu couleurs unique (sans doublons) */
 async function buildUniqueDropdown(){
   const sel = document.getElementById('colorSelect');
   const { data: rows, error } = await supabase.from('colors').select('name');
@@ -171,62 +151,80 @@ async function buildUniqueDropdown(){
     });
 }
 
-/* Lecture du stock (fusionne doublons à l’affichage) */
+/* Lecture du stock (groupe par couleur+type) */
 async function loadStock(){
   const { data, error } = await supabase.from('v_stock').select('*');
   if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
-  const grouped = new Map();
+
+  const grouped = new Map(); // key = norm(color)+'|'+type
   for(const r of (data||[])){
-    const key = norm(r.color);
+    const key = norm(r.color) + '|' + (r.type || 'Grande table');
     const name = title(r.color);
+    const type = r.type || 'Grande table';
     const qty = r.qty_current ?? 0;
-    if(!grouped.has(key)) grouped.set(key, { name, qty: 0 });
+    if(!grouped.has(key)) grouped.set(key, { name, type, qty: 0 });
     grouped.get(key).qty += qty;
   }
+
   const rows = [...grouped.values()]
-    .sort((a,b)=>a.name.localeCompare(b.name))
-    .map(({name, qty})=>{
+    .sort((a,b)=> a.name.localeCompare(b.name) || a.type.localeCompare(b.type))
+    .map(({name, type, qty})=>{
       const cls = qty < 2 ? "low" : "";
-      return `<tr><td>${name}</td><td class="${cls}">${qty}</td></tr>`;
+      const ref = TYPE_REFS[type] || "-";
+      return `<tr><td>${name}</td><td>${type}</td><td>${ref}</td><td class="${cls}">${qty}</td></tr>`;
     }).join('');
-  document.getElementById('stockBody').innerHTML = rows || '<tr><td colspan="2">Aucune donnée</td></tr>';
+  document.getElementById('stockBody').innerHTML = rows || '<tr><td colspan="4">Aucune donnée</td></tr>';
   setMsg('ok', "Stock chargé.");
 }
 
-/* Ajouter = mise au stock exact */
+/* Ajouter = mise au stock exact pour (couleur, type) */
 async function setExactQuantity(){
   setMsg('muted', "⏳ Début…");
   const colorName = document.getElementById('colorSelect').value;
-  const target = Number(document.getElementById('qtyInput').value);
+  const typeName  = document.getElementById('typeSelect').value;
+  const target    = Number(document.getElementById('qtyInput').value);
+
   if(!colorName){ setMsg('err', "❌ Choisis une couleur."); return; }
+  if(!typeName){ setMsg('err', "❌ Choisis un type."); return; }
   if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Quantité (≥ 0)."); return; }
 
+  // id de la couleur (tolérance casse)
   const { data: cdata, error: cerr } = await supabase.from('colors')
     .select('id,name').ilike('name', colorName).maybeSingle();
   if(cerr){ setMsg('err', "❌ Lecture couleur: " + cerr.message); return; }
   if(!cdata){ setMsg('err', `❌ Couleur absente en base: ${colorName}`); return; }
   const colorId = cdata.id;
 
-  const { data: vs, error: verr } = await supabase.from('v_stock').select('color, qty_current');
+  // stock actuel pour ce couple (couleur, type)
+  const { data: vs, error: verr } = await supabase.from('v_stock')
+    .select('color, type, qty_current')
+    .ilike('color', colorName)
+    .eq('type', typeName);
   if(verr){ setMsg('err', "❌ Lecture stock actuel: " + verr.message); return; }
-  const current = (vs||[]).filter(r => norm(r.color) === norm(colorName))
-                          .reduce((s,r)=>s+(r.qty_current||0), 0);
+  const current = (vs||[]).reduce((s,r)=>s+(r.qty_current||0), 0);
 
   const delta = target - current;
-  if(delta === 0){ setMsg('ok', `✅ « ${title(colorName)} » est déjà à ${target}.`); return; }
+  if(delta === 0){ setMsg('ok', `✅ « ${title(colorName)} / ${typeName} » est déjà à ${target}.`); return; }
 
-  const { error: rerr } = await supabase.rpc('apply_move', { p_color_id: colorId, p_delta: delta, p_note: `MAJ directe à ${target}` });
-  if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message + " (policies ?)"); return; }
+  const { error: rerr } = await supabase.rpc('apply_move', {
+    p_color_id: colorId,
+    p_delta: delta,
+    p_note: `MAJ directe à ${target}`,
+    p_type: typeName
+  });
+  if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message); return; }
 
-  setMsg('ok', `✅ « ${title(colorName)} » : ${current} → ${target}`);
+  setMsg('ok', `✅ « ${title(colorName)} / ${typeName} » : ${current} → ${target}`);
   document.getElementById('qtyInput').value = "";
   await loadStock();
 }
 
 /* events + init */
 document.getElementById('addBtn').addEventListener('click', setExactQuantity);
+document.getElementById('typeSelect').addEventListener('change', refreshRefBox);
 
 (async function init(){
+  refreshRefBox();
   await buildUniqueDropdown();
   await loadStock();
   try {
