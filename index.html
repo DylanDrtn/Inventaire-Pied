@@ -5,60 +5,107 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Inventaire Pied de Table</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;margin:24px;background:#fcfcfc;}
-    .wrap{max-width:820px;margin:0 auto}
-    .card{border:1px solid #e5e7eb;border-radius:14px;padding:16px;margin-bottom:16px;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.04);}
-    h1{margin:0 0 16px 0}
+    :root{
+      --brand:#5a7d3a;          /* vert cactus */
+      --brand-600:#4f7133;
+      --brand-700:#44652d;
+      --brand-50:#f0f6ec;
+      --text:#1f2937;
+      --muted:#6b7280;
+      --danger:#a50000;
+      --card:#ffffff;
+      --line:#e5e7eb;
+    }
+    *{box-sizing:border-box}
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      margin:0; background:#fafafa; color:var(--text);
+    }
+    .topbar{
+      background:linear-gradient(0deg,var(--brand-600),var(--brand));
+      color:#fff; padding:14px 0;
+    }
+    .wrap{max-width:980px;margin:0 auto;padding:0 16px}
+    .header{display:flex;align-items:center;gap:12px}
+    .header .logo{
+      height:40px; width:auto; display:block; object-fit:contain;
+      filter:brightness(0) invert(1); /* logo blanc si source sombre */
+    }
+    h1{margin:0;font-weight:700;letter-spacing:.2px}
+    .content{padding:20px 16px}
+    .card{
+      border:1px solid var(--line);
+      border-radius:16px; padding:16px; margin-bottom:16px;
+      background:var(--card); box-shadow:0 2px 8px rgba(0,0,0,.04);
+    }
     label{font-weight:600}
-    input,select,button{padding:10px;border:1px solid #ddd;border-radius:12px}
-    button{cursor:pointer;background:#fff}
-    button:hover{background:#f7f7f7}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
-    th{background:#fafafa}
-    td.low{color:#a50000;font-weight:700}
-    .row{display:flex;gap:10px;flex-wrap:wrap;align-items:end}
+    input,select{
+      padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff;
+    }
+    button{
+      padding:10px 14px;border:1px solid var(--brand-600);
+      border-radius:12px;background:var(--brand);color:#fff;cursor:pointer;
+      transition:transform .02s ease, background .15s;
+    }
+    button:hover{background:var(--brand-600)}
+    button:active{transform:scale(.98)}
+    table{width:100%;border-collapse:collapse;background:#fff}
+    th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+    th{background:var(--brand-50)}
+    td.low{color:var(--danger);font-weight:700}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
     .msg{min-height:1.4em;margin-top:8px;white-space:pre-line}
-    .ok{color:#0a7f2e}.err{color:#a50000}.muted{color:#555}
-    .header{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
-    .header .logo{height:40px;}
+    .ok{color:#0a7f2e}.err{color:var(--danger)}.muted{color:var(--muted)}
   </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="header">
-    <img src="https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png" alt="Fermob" class="logo">
-    <h1>Inventaire Pied de Table</h1>
-  </div>
 
-  <div class="card">
-    <div class="row">
-      <div style="flex:1 1 260px">
-        <label>Couleur</label><br>
-        <select id="colorSelect">
-          <!-- sera rempli et dédupliqué -->
-        </select>
-      </div>
-      <div>
-        <label>Quantité de pieds</label><br>
-        <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px">
-      </div>
-      <div>
-        <button id="addBtn"><b>Ajouter</b></button>
+  <!-- HEADER -->
+  <div class="topbar">
+    <div class="wrap">
+      <div class="header">
+        <img
+          src="https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png"
+          alt="Fermob" class="logo"
+          onerror="this.onerror=null; this.src='logo.png'; this.style.filter='none';"
+        />
+        <h1>Inventaire Pied de Table</h1>
       </div>
     </div>
-    <div id="msg" class="msg"></div>
-    <p class="muted" style="margin:6px 0 0">“Ajouter” met le stock Supabase <b>exactement</b> à la quantité saisie.</p>
   </div>
 
-  <div class="card">
-    <h3 style="margin:0 0 10px">Stock par couleur</h3>
-    <table>
-      <thead><tr><th>Couleur</th><th>Stock</th></tr></thead>
-      <tbody id="stockBody"></tbody>
-    </table>
+  <!-- CONTENU -->
+  <div class="content">
+    <div class="wrap">
+
+      <div class="card">
+        <div class="row">
+          <div style="flex:1 1 260px">
+            <label>Couleur</label><br>
+            <select id="colorSelect"><!-- rempli dynamiquement --></select>
+          </div>
+          <div>
+            <label>Quantité de pieds</label><br>
+            <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px">
+          </div>
+          <div>
+            <button id="addBtn"><b>Ajouter</b></button>
+          </div>
+        </div>
+        <div id="msg" class="msg"></div>
+        <p class="muted" style="margin:6px 0 0">“Ajouter” met le stock Supabase <b>exactement</b> à la quantité saisie.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 10px">Stock par couleur</h3>
+        <table>
+          <thead><tr><th>Couleur</th><th>Stock</th></tr></thead>
+          <tbody id="stockBody"></tbody>
+        </table>
+      </div>
+
+    </div>
   </div>
-</div>
 
 <script type="module">
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -67,20 +114,12 @@ const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// Helpers
+/* helpers */
 const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
-const title = s => (s||"")
-  .toLowerCase()
-  .replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
+const title = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
+function setMsg(cls, text){ const m=document.getElementById('msg'); m.className='msg '+cls; m.textContent=text; }
 
-function setMsg(cls, text){
-  const m = document.getElementById('msg');
-  if(!m) return;
-  m.className = 'msg ' + cls;
-  m.textContent = text;
-}
-
-// Construit un menu déroulant unique (sans doublons)
+/* menu unique (sans doublons) */
 async function buildUniqueDropdown(){
   const sel = document.getElementById('colorSelect');
   const { data: rows, error } = await supabase.from('colors').select('name');
@@ -88,11 +127,9 @@ async function buildUniqueDropdown(){
 
   const byKey = new Map();
   for(const r of (rows||[])){
-    const k = norm(r.name);
-    if(!k) continue;
+    const k = norm(r.name); if(!k) continue;
     if(!byKey.has(k)) byKey.set(k, title(r.name));
   }
-
   sel.innerHTML = '';
   [...byKey.values()].sort((a,b)=>a.localeCompare(b))
     .forEach(name => {
@@ -102,7 +139,7 @@ async function buildUniqueDropdown(){
     });
 }
 
-// Charge le stock et dédoublonne
+/* lecture du stock (fusionne doublons) */
 async function loadStock(){
   const { data, error } = await supabase.from('v_stock').select('*');
   if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
@@ -115,26 +152,23 @@ async function loadStock(){
     if(!grouped.has(key)) grouped.set(key, { name, qty: 0 });
     grouped.get(key).qty += qty;
   }
-
   const rows = [...grouped.values()]
     .sort((a,b)=>a.name.localeCompare(b.name))
     .map(({name, qty})=>{
       const cls = qty < 2 ? "low" : "";
       return `<tr><td>${name}</td><td class="${cls}">${qty}</td></tr>`;
     }).join('');
-
   document.getElementById('stockBody').innerHTML = rows || '<tr><td colspan="2">Aucune donnée</td></tr>';
   setMsg('ok', "Stock chargé.");
 }
 
-// Ajouter / maj exacte
+/* ajouter = mise au stock exact */
 async function setExactQuantity(){
   setMsg('muted', "⏳ Début…");
   const colorName = document.getElementById('colorSelect').value;
   const target = Number(document.getElementById('qtyInput').value);
-
   if(!colorName){ setMsg('err', "❌ Choisis une couleur."); return; }
-  if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Entre une quantité valide (≥ 0)."); return; }
+  if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Quantité (≥ 0)."); return; }
 
   const { data: cdata, error: cerr } = await supabase.from('colors')
     .select('id,name').ilike('name', colorName).maybeSingle();
@@ -142,22 +176,23 @@ async function setExactQuantity(){
   if(!cdata){ setMsg('err', `❌ Couleur absente en base: ${colorName}`); return; }
   const colorId = cdata.id;
 
-  const { data: vs } = await supabase.from('v_stock').select('color, qty_current');
+  const { data: vs, error: verr } = await supabase.from('v_stock').select('color, qty_current');
+  if(verr){ setMsg('err', "❌ Lecture stock actuel: " + verr.message); return; }
   const current = (vs||[]).filter(r => norm(r.color) === norm(colorName))
-                          .reduce((sum,r)=>sum+(r.qty_current||0), 0);
+                          .reduce((s,r)=>s+(r.qty_current||0), 0);
 
   const delta = target - current;
   if(delta === 0){ setMsg('ok', `✅ « ${title(colorName)} » est déjà à ${target}.`); return; }
 
   const { error: rerr } = await supabase.rpc('apply_move', { p_color_id: colorId, p_delta: delta, p_note: `MAJ directe à ${target}` });
-  if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message); return; }
+  if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message + " (policies ?)"); return; }
 
   setMsg('ok', `✅ « ${title(colorName)} » : ${current} → ${target}`);
   document.getElementById('qtyInput').value = "";
   await loadStock();
 }
 
-// Events + init
+/* events + init */
 document.getElementById('addBtn').addEventListener('click', setExactQuantity);
 
 (async function init(){
