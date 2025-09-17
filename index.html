@@ -36,14 +36,9 @@
     .msg{min-height:1.4em;margin-top:8px;white-space:pre-line}
     .ok{color:#0a7f2e}.err{color:var(--danger)}.muted{color:var(--muted)}
     .ref{font-size:12px;color:var(--muted);margin-top:6px}
-    .fatal{background:#ffecec;border:1px solid #ffb4b4;color:#900;padding:12px;border-radius:12px;margin:16px 0;display:none}
   </style>
 </head>
 <body>
-  <noscript style="display:block;padding:12px;margin:12px;background:#ffecec;border:1px solid #ffb4b4;color:#900;text-align:center">
-    Le JavaScript est désactivé. Active-le pour utiliser l’inventaire.
-  </noscript>
-
   <!-- HEADER -->
   <div class="topbar">
     <div class="wrap">
@@ -58,13 +53,13 @@
   <!-- CONTENU -->
   <div class="content">
     <div class="wrap">
-      <div id="fatal" class="fatal"></div>
 
       <div class="card">
         <div class="row">
           <div style="flex:1 1 260px">
             <label>Couleur</label><br>
-            <select id="colorSelect"><!-- rempli dynamiquement --></select>
+            <!-- ATTENTION: value = ID de la couleur -->
+            <select id="colorSelect"></select>
           </div>
 
           <div style="flex:1 1 220px">
@@ -96,24 +91,14 @@
           <tbody id="stockBody"></tbody>
         </table>
       </div>
+
     </div>
   </div>
 
 <script type="module">
+/* ====== Config & lib ====== */
 const TYPE_REFS = { "Petite table":"14x8 / 8x8", "Grande table":"165x10 / 207x10" };
 
-function showFatal(msg){
-  const f = document.getElementById('fatal'); f.style.display='block'; f.textContent = "❌ " + msg;
-}
-function setMsg(cls, text){
-  const m = document.getElementById('msg'); m.className='msg '+cls; m.textContent=text;
-}
-function refreshRefBox(){
-  const t = document.getElementById('typeSelect').value;
-  document.getElementById('refBox').textContent = "Réf : " + (TYPE_REFS[t] || "-");
-}
-
-/* LOGO (local -> wiki -> texte) */
 (async function loadLogo(){
   const logoEl = document.getElementById('logoImg');
   const textEl = document.getElementById('logoText');
@@ -125,121 +110,130 @@ function refreshRefBox(){
   logoEl.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png';
 })();
 
-/* Charge Supabase en module */
-let supabase;
-(async function loadLib(){
-  try{
-    const mod = await import("https://esm.sh/@supabase/supabase-js@2");
-    const createClient = mod.createClient;
-    const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
-    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    init(); // démarre l’app
-  }catch(e){
-    showFatal("Impossible de charger la librairie Supabase : " + e.message);
-  }
-})();
+const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+const supabase = createClient(
+  "https://ytoxpennisgfzdtpxmgh.supabase.co",
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM"
+);
 
-/* Helpers de texte */
+/* ====== Helpers ====== */
 const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
 const title = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
+function setMsg(cls, text){ const m=document.getElementById('msg'); m.className='msg '+cls; m.textContent=text; }
+function refreshRefBox(){ const t=document.getElementById('typeSelect').value; document.getElementById('refBox').textContent="Réf : "+(TYPE_REFS[t]||"-"); }
 
-/* Construit la liste unique de couleurs */
+/* ====== Couleurs : menu = ID (corrige le bug des doublons) ====== */
 async function buildUniqueDropdown(){
-  try{
-    const sel = document.getElementById('colorSelect');
-    const { data, error } = await supabase.from('colors').select('name');
-    if(error){ setMsg('err', "Lecture couleurs: " + error.message); return; }
+  const sel = document.getElementById('colorSelect');
+  const { data: rows, error } = await supabase.from('colors').select('id,name').order('name');
+  if(error){ setMsg('err', "Lecture couleurs: " + error.message); return; }
 
-    const byKey = new Map();
-    for(const r of (data||[])){ const k=norm(r.name); if(k && !byKey.has(k)) byKey.set(k, title(r.name)); }
-    sel.innerHTML = '';
-    [...byKey.values()].sort((a,b)=>a.localeCompare(b)).forEach(name=>{
-      const opt=document.createElement('option'); opt.value=name; opt.textContent=name; sel.appendChild(opt);
+  // dédoublonne par nom normalisé → garde la première id rencontrée
+  const byKey = new Map(); // key -> {id,name}
+  for(const r of (rows||[])){
+    const k = norm(r.name);
+    if(k && !byKey.has(k)) byKey.set(k, { id: r.id, name: title(r.name) });
+  }
+
+  sel.innerHTML = '';
+  [...byKey.values()]
+    .sort((a,b)=>a.name.localeCompare(b.name))
+    .forEach(({id,name})=>{
+      const opt = document.createElement('option');
+      opt.value = String(id);   // <<<<<< ID en value
+      opt.textContent = name;   // texte affiché = nom propre
+      sel.appendChild(opt);
     });
-  }catch(e){ showFatal("Erreur chargement couleurs : " + e.message); }
 }
 
-/* Charge le stock et N’AFFICHE QUE les lignes > 0 */
+/* ====== Tableau : n’affiche que les lignes > 0 (depuis la vue v_stock) ====== */
 async function loadStock(){
-  try{
-    const { data, error } = await supabase.from('v_stock').select('*');
-    if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
+  const { data, error } = await supabase.from('v_stock').select('*');
+  if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
 
-    const only = (data||[]).filter(r => (r.qty_current ?? 0) > 0);
-    const grouped = new Map(); // key = norm(color)+'|'+type
-    for(const r of only){
-      const key = norm(r.color)+'|'+(r.type||'Grande table');
-      const name = title(r.color);
-      const type = r.type || 'Grande table';
-      const qty  = r.qty_current ?? 0;
-      if(!grouped.has(key)) grouped.set(key,{name,type,qty:0});
-      grouped.get(key).qty += qty;
-    }
-    const rows = [...grouped.values()]
-      .sort((a,b)=>a.name.localeCompare(b.name) || a.type.localeCompare(b.type))
-      .map(({name,type,qty})=>{
-        const ref = TYPE_REFS[type] || "-";
-        return `<tr><td>${name}</td><td>${type}</td><td>${ref}</td><td>${qty}</td></tr>`;
-      }).join('');
-    document.getElementById('stockBody').innerHTML = rows || '<tr><td colspan="4">Aucune donnée</td></tr>';
-    setMsg(rows ? 'ok' : 'muted', rows ? "Stock chargé." : "Aucune ligne enregistrée.");
-  }catch(e){ showFatal("Erreur chargement stock : " + e.message); }
+  const only = (data||[]).filter(r => (r.qty_current ?? 0) > 0);
+  const grouped = new Map(); // key = norm(color)+'|'+type
+  for(const r of only){
+    const key = norm(r.color)+'|'+(r.type||'Grande table');
+    const name = title(r.color);
+    const type = r.type || 'Grande table';
+    const qty  = r.qty_current ?? 0;
+    if(!grouped.has(key)) grouped.set(key,{name,type,qty:0});
+    grouped.get(key).qty += qty;
+  }
+  const rows = [...grouped.values()]
+    .sort((a,b)=>a.name.localeCompare(b.name) || a.type.localeCompare(b.type))
+    .map(({name,type,qty})=>{
+      const ref = TYPE_REFS[type] || "-";
+      return `<tr><td>${name}</td><td>${type}</td><td>${ref}</td><td>${qty}</td></tr>`;
+    }).join('');
+  document.getElementById('stockBody').innerHTML = rows || '<tr><td colspan="4">Aucune donnée</td></tr>';
+  setMsg(rows ? 'ok' : 'muted', rows ? "Stock chargé." : "Aucune ligne enregistrée.");
 }
 
-/* Ajouter = mise au stock exact pour (couleur, type) */
+/* ====== Ajouter : calcule Δ en lisant le stock par color_id + type ====== */
 async function setExactQuantity(){
-  try{
-    setMsg('muted', "⏳ Début…");
-    const colorName = document.getElementById('colorSelect').value;
-    const typeName  = document.getElementById('typeSelect').value;
-    const target    = Number(document.getElementById('qtyInput').value);
+  setMsg('muted', "⏳ Début…");
+  const colorId  = Number(document.getElementById('colorSelect').value); // ID direct
+  const nameText = document.getElementById('colorSelect').selectedOptions[0]?.textContent || '';
+  const typeName = document.getElementById('typeSelect').value;
+  const target   = Number(document.getElementById('qtyInput').value);
 
-    if(!colorName){ setMsg('err', "❌ Choisis une couleur."); return; }
-    if(!typeName){ setMsg('err', "❌ Choisis un type."); return; }
-    if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Quantité (≥ 0)."); return; }
+  if(!Number.isFinite(colorId)){ setMsg('err',"❌ Choisis une couleur."); return; }
+  if(!typeName){ setMsg('err', "❌ Choisis un type."); return; }
+  if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Quantité (≥ 0)."); return; }
 
-    const { data: cdata, error: cerr } = await supabase.from('colors')
-      .select('id,name').ilike('name', colorName).maybeSingle();
-    if(cerr){ setMsg('err', "❌ Lecture couleur: " + cerr.message); return; }
-    if(!cdata){ setMsg('err', `❌ Couleur absente en base: ${colorName}`); return; }
-    const colorId = cdata.id;
+  // Lire le stock actuel directement dans legs_stock par (color_id, type)
+  const { data: cur, error: cerr } = await supabase
+    .from('legs_stock')
+    .select('qty')
+    .eq('color_id', colorId)
+    .eq('type', typeName)
+    .maybeSingle();
+  if(cerr){ setMsg('err', "❌ Lecture stock actuel: " + cerr.message); return; }
+  const current = cur?.qty ?? 0;
 
-    const { data: vs, error: verr } = await supabase.from('v_stock')
-      .select('color,type,qty_current').ilike('color', colorName).eq('type', typeName);
-    if(verr){ setMsg('err', "❌ Lecture stock actuel: " + verr.message); return; }
-    const current = (vs||[]).reduce((s,r)=>s+(r.qty_current||0),0);
+  const delta = target - current;
+  if(delta === 0){ setMsg('ok', `✅ « ${nameText} / ${typeName} » est déjà à ${target}.`); return; }
 
-    const delta = target - current;
-    if(delta === 0){ setMsg('ok', `✅ « ${title(colorName)} / ${typeName} » est déjà à ${target}.`); return; }
+  // Appliquer le mouvement avec p_type
+  const { error: rerr } = await supabase.rpc('apply_move', {
+    p_color_id: colorId, p_delta: delta, p_note: `MAJ directe à ${target}`, p_type: typeName
+  });
+  if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message); return; }
 
-    const { error: rerr } = await supabase.rpc('apply_move', {
-      p_color_id: colorId, p_delta: delta, p_note: `MAJ directe à ${target}`, p_type: typeName
-    });
-    if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message); return; }
-
-    setMsg('ok', `✅ « ${title(colorName)} / ${typeName} » : ${current} → ${target}`);
-    document.getElementById('qtyInput').value = "";
-    await loadStock();
-  }catch(e){ showFatal("Erreur ajout : " + e.message); }
+  setMsg('ok', `✅ « ${nameText} / ${typeName} » : ${current} → ${target}`);
+  document.getElementById('qtyInput').value = "";
+  await loadStock();
 }
 
-/* Events + init */
-function init(){
-  try{
-    document.getElementById('addBtn').addEventListener('click', setExactQuantity);
-    document.getElementById('typeSelect').addEventListener('change', refreshRefBox);
-    refreshRefBox();
-    buildUniqueDropdown().then(loadStock);
+/* ====== Events + init ====== */
+document.getElementById('addBtn').addEventListener('click', setExactQuantity);
+document.getElementById('typeSelect').addEventListener('change', () => {
+  const t = document.getElementById('typeSelect').value;
+  document.getElementById('refBox').textContent = "Réf : " + (TYPE_REFS[t] || "-");
+});
 
-    // Live update
-    try {
-      supabase.channel('stock_changes')
-        .on('postgres_changes', {event:'*', schema:'public', table:'legs_stock'}, loadStock)
-        .subscribe();
-    } catch(_){}
-  }catch(e){ showFatal("Initialisation impossible : " + e.message); }
-}
+(async function init(){
+  const logoEl = document.getElementById('logoImg');
+  const textEl = document.getElementById('logoText');
+  // fallback logo local > wiki > texte
+  try{
+    const r = await fetch('logo.png', {method:'HEAD', cache:'no-store'});
+    if(r.ok){ logoEl.src='logo.png'; logoEl.classList.remove('logo--invert'); }
+    else { logoEl.onerror = ()=>{ logoEl.style.display='none'; textEl.style.display='inline-block'; }; logoEl.src='https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png'; }
+  }catch(_){ logoEl.style.display='none'; textEl.style.display='inline-block'; }
+
+  document.getElementById('refBox').textContent = "Réf : " + (TYPE_REFS["Petite table"]);
+  await buildUniqueDropdown();
+  await loadStock();
+
+  try {
+    supabase.channel('stock_changes')
+      .on('postgres_changes', {event:'*', schema:'public', table:'legs_stock'}, loadStock)
+      .subscribe();
+  } catch(_) {}
+})();
 </script>
 </body>
 </html>
