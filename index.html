@@ -125,25 +125,30 @@ function refreshRefBox(){ const t=document.getElementById('typeSelect').value; d
 /* ====== Couleurs : menu = ID (corrige le bug des doublons) ====== */
 async function buildUniqueDropdown(){
   const sel = document.getElementById('colorSelect');
-  const { data: rows, error } = await supabase.from('colors').select('id,name').order('name');
+  const { data: rows, error } = await supabase
+    .from('colors')
+    .select('id,name')
+    .eq('active', true)   // <<< ne prend que les actives
+    .order('name');
+
   if(error){ setMsg('err', "Lecture couleurs: " + error.message); return; }
 
-  // dédoublonne par nom normalisé → garde la première id rencontrée
-  const byKey = new Map(); // key -> {id,name}
+  const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
+  const title = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
+
+  const byKey = new Map(); // nom normalisé -> {id,name}
   for(const r of (rows||[])){
     const k = norm(r.name);
     if(k && !byKey.has(k)) byKey.set(k, { id: r.id, name: title(r.name) });
   }
 
   sel.innerHTML = '';
-  [...byKey.values()]
-    .sort((a,b)=>a.name.localeCompare(b.name))
-    .forEach(({id,name})=>{
-      const opt = document.createElement('option');
-      opt.value = String(id);   // <<<<<< ID en value
-      opt.textContent = name;   // texte affiché = nom propre
-      sel.appendChild(opt);
-    });
+  [...byKey.values()].sort((a,b)=>a.name.localeCompare(b.name)).forEach(({id,name})=>{
+    const opt = document.createElement('option');
+    opt.value = String(id);
+    opt.textContent = name;
+    sel.appendChild(opt);
+  });
 }
 
 /* ====== Tableau : n’affiche que les lignes > 0 (depuis la vue v_stock) ====== */
