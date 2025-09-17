@@ -1,36 +1,245 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Inventaire Pied de Table</title>
+  <style>
+    :root{ --brand:#5a7d3a; --brand-600:#4f7133; --brand-50:#f0f6ec;
+           --text:#1f2937; --muted:#6b7280; --danger:#a50000; --card:#ffffff; --line:#e5e7eb; }
+    *{box-sizing:border-box}
+    body{
+      margin:0; color:var(--text); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+      background:
+        radial-gradient(rgba(90,125,58,.08) 1px, transparent 1px) 0 0/18px 18px,
+        radial-gradient(rgba(90,125,58,.05) 1px, transparent 1px) 9px 9px/18px 18px,
+        #f7faf5;
+    }
+    .topbar{background:linear-gradient(0deg,var(--brand-600),var(--brand));color:#fff;padding:14px 0;position:sticky;top:0;z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+    .wrap{max-width:980px;margin:0 auto;padding:0 16px}
+    .header{display:flex;align-items:center;gap:14px}
+    .logo{height:42px;width:auto;object-fit:contain;display:block}
+    .logo--invert{filter:brightness(0) invert(1)}
+    .logo-text{display:none;font-weight:800;letter-spacing:.3px;font-size:22px}
+    h1{margin:0;font-weight:700;letter-spacing:.2px;font-size:20px}
+    .content{padding:20px 16px}
+    .card{border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px;background:var(--card);box-shadow:0 2px 10px rgba(0,0,0,.05)}
+    label{font-weight:600}
+    input,select{padding:10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+    button{padding:10px 14px;border:1px solid var(--brand-600);border-radius:12px;background:var(--brand);color:#fff;cursor:pointer;transition:transform .02s ease, background .15s}
+    button:hover{background:var(--brand-600)} button:active{transform:scale(.98)}
+    table{width:100%;border-collapse:collapse;background:#fff}
+    th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+    th{background:var(--brand-50)}
+    td.low{color:var(--danger);font-weight:700}
+    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+    .msg{min-height:1.4em;margin-top:8px;white-space:pre-line}
+    .ok{color:#0a7f2e}.err{color:var(--danger)}.muted{color:var(--muted)}
+    .ref{font-size:12px;color:var(--muted);margin-top:6px}
+    .fatal{background:#ffecec;border:1px solid #ffb4b4;color:#900;padding:12px;border-radius:12px;margin:16px 0;display:none}
+  </style>
+</head>
+<body>
+  <noscript style="display:block;padding:12px;margin:12px;background:#ffecec;border:1px solid #ffb4b4;color:#900;text-align:center">
+    Le JavaScript est désactivé. Active-le pour utiliser l’inventaire.
+  </noscript>
+
+  <!-- HEADER -->
+  <div class="topbar">
+    <div class="wrap">
+      <div class="header">
+        <img id="logoImg" class="logo logo--invert" alt="Fermob" src="" />
+        <span id="logoText" class="logo-text">Fermob</span>
+        <h1>Inventaire Pied de Table</h1>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONTENU -->
+  <div class="content">
+    <div class="wrap">
+      <div id="fatal" class="fatal"></div>
+
+      <div class="card">
+        <div class="row">
+          <div style="flex:1 1 260px">
+            <label>Couleur</label><br>
+            <select id="colorSelect"><!-- rempli dynamiquement --></select>
+          </div>
+
+          <div style="flex:1 1 220px">
+            <label>Type de pied</label><br>
+            <select id="typeSelect">
+              <option value="Petite table">Petite table</option>
+              <option value="Grande table">Grande table</option>
+            </select>
+            <div id="refBox" class="ref"></div>
+          </div>
+
+          <div>
+            <label>Quantité de pieds</label><br>
+            <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px">
+          </div>
+
+          <div>
+            <button id="addBtn"><b>Ajouter</b></button>
+          </div>
+        </div>
+        <div id="msg" class="msg"></div>
+        <p class="muted" style="margin:6px 0 0">“Ajouter” met le stock Supabase <b>exactement</b> à la quantité saisie.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="margin:0 0 10px">Stock par couleur et type</h3>
+        <table>
+          <thead><tr><th>Couleur</th><th>Type</th><th>Référence</th><th>Stock</th></tr></thead>
+          <tbody id="stockBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
 <script type="module">
-// ... (garde tout le reste inchangé)
+const TYPE_REFS = { "Petite table":"14x8 / 8x8", "Grande table":"165x10 / 207x10" };
 
-// 👉 remplace la définition actuelle de loadStock() par celle-ci :
-async function loadStock(){
-  const { data, error } = await supabase.from('v_stock').select('*');
-  if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
+function showFatal(msg){
+  const f = document.getElementById('fatal'); f.style.display='block'; f.textContent = "❌ " + msg;
+}
+function setMsg(cls, text){
+  const m = document.getElementById('msg'); m.className='msg '+cls; m.textContent=text;
+}
+function refreshRefBox(){
+  const t = document.getElementById('typeSelect').value;
+  document.getElementById('refBox').textContent = "Réf : " + (TYPE_REFS[t] || "-");
+}
 
-  // 1) garder seulement les lignes avec stock > 0
-  const nonZero = (data||[]).filter(r => (r.qty_current ?? 0) > 0);
+/* LOGO (local -> wiki -> texte) */
+(async function loadLogo(){
+  const logoEl = document.getElementById('logoImg');
+  const textEl = document.getElementById('logoText');
+  try{
+    const r = await fetch('logo.png', {method:'HEAD', cache:'no-store'});
+    if(r.ok){ logoEl.src='logo.png'; logoEl.classList.remove('logo--invert'); return; }
+  }catch(_){}
+  logoEl.onerror = ()=>{ logoEl.style.display='none'; textEl.style.display='inline-block'; };
+  logoEl.src = 'https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png';
+})();
 
-  // 2) regrouper par (couleur, type) avec déduplication éventuelle
-  const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
-  const title = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
-
-  const grouped = new Map(); // key = norm(color)+'|'+type
-  for(const r of nonZero){
-    const key = norm(r.color) + '|' + (r.type || 'Grande table');
-    const name = title(r.color);
-    const type = r.type || 'Grande table';
-    const qty = r.qty_current ?? 0;
-    if(!grouped.has(key)) grouped.set(key, { name, type, qty: 0 });
-    grouped.get(key).qty += qty;
+/* Charge Supabase en module */
+let supabase;
+(async function loadLib(){
+  try{
+    const mod = await import("https://esm.sh/@supabase/supabase-js@2");
+    const createClient = mod.createClient;
+    const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
+    supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    init(); // démarre l’app
+  }catch(e){
+    showFatal("Impossible de charger la librairie Supabase : " + e.message);
   }
+})();
 
-  // 3) rendu du tableau (seulement ce qui existe)
-  const rows = [...grouped.values()]
-    .sort((a,b)=> a.name.localeCompare(b.name) || a.type.localeCompare(b.type))
-    .map(({name, type, qty})=>{
-      return `<tr><td>${name}</td><td>${type}</td><td>${type === 'Petite table' ? '14x8 / 8x8' : '165x10 / 207x10'}</td><td>${qty}</td></tr>`;
-    }).join('');
+/* Helpers de texte */
+const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
+const title = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
 
-  document.getElementById('stockBody').innerHTML = rows || '<tr><td colspan="4">Aucune donnée</td></tr>';
-  setMsg('ok', rows ? "Stock chargé." : "Aucune ligne enregistrée.");
+/* Construit la liste unique de couleurs */
+async function buildUniqueDropdown(){
+  try{
+    const sel = document.getElementById('colorSelect');
+    const { data, error } = await supabase.from('colors').select('name');
+    if(error){ setMsg('err', "Lecture couleurs: " + error.message); return; }
+
+    const byKey = new Map();
+    for(const r of (data||[])){ const k=norm(r.name); if(k && !byKey.has(k)) byKey.set(k, title(r.name)); }
+    sel.innerHTML = '';
+    [...byKey.values()].sort((a,b)=>a.localeCompare(b)).forEach(name=>{
+      const opt=document.createElement('option'); opt.value=name; opt.textContent=name; sel.appendChild(opt);
+    });
+  }catch(e){ showFatal("Erreur chargement couleurs : " + e.message); }
+}
+
+/* Charge le stock et N’AFFICHE QUE les lignes > 0 */
+async function loadStock(){
+  try{
+    const { data, error } = await supabase.from('v_stock').select('*');
+    if(error){ setMsg('err', "Lecture stock: " + error.message); return; }
+
+    const only = (data||[]).filter(r => (r.qty_current ?? 0) > 0);
+    const grouped = new Map(); // key = norm(color)+'|'+type
+    for(const r of only){
+      const key = norm(r.color)+'|'+(r.type||'Grande table');
+      const name = title(r.color);
+      const type = r.type || 'Grande table';
+      const qty  = r.qty_current ?? 0;
+      if(!grouped.has(key)) grouped.set(key,{name,type,qty:0});
+      grouped.get(key).qty += qty;
+    }
+    const rows = [...grouped.values()]
+      .sort((a,b)=>a.name.localeCompare(b.name) || a.type.localeCompare(b.type))
+      .map(({name,type,qty})=>{
+        const ref = TYPE_REFS[type] || "-";
+        return `<tr><td>${name}</td><td>${type}</td><td>${ref}</td><td>${qty}</td></tr>`;
+      }).join('');
+    document.getElementById('stockBody').innerHTML = rows || '<tr><td colspan="4">Aucune donnée</td></tr>';
+    setMsg(rows ? 'ok' : 'muted', rows ? "Stock chargé." : "Aucune ligne enregistrée.");
+  }catch(e){ showFatal("Erreur chargement stock : " + e.message); }
+}
+
+/* Ajouter = mise au stock exact pour (couleur, type) */
+async function setExactQuantity(){
+  try{
+    setMsg('muted', "⏳ Début…");
+    const colorName = document.getElementById('colorSelect').value;
+    const typeName  = document.getElementById('typeSelect').value;
+    const target    = Number(document.getElementById('qtyInput').value);
+
+    if(!colorName){ setMsg('err', "❌ Choisis une couleur."); return; }
+    if(!typeName){ setMsg('err', "❌ Choisis un type."); return; }
+    if(!Number.isFinite(target) || target < 0){ setMsg('err', "❌ Quantité (≥ 0)."); return; }
+
+    const { data: cdata, error: cerr } = await supabase.from('colors')
+      .select('id,name').ilike('name', colorName).maybeSingle();
+    if(cerr){ setMsg('err', "❌ Lecture couleur: " + cerr.message); return; }
+    if(!cdata){ setMsg('err', `❌ Couleur absente en base: ${colorName}`); return; }
+    const colorId = cdata.id;
+
+    const { data: vs, error: verr } = await supabase.from('v_stock')
+      .select('color,type,qty_current').ilike('color', colorName).eq('type', typeName);
+    if(verr){ setMsg('err', "❌ Lecture stock actuel: " + verr.message); return; }
+    const current = (vs||[]).reduce((s,r)=>s+(r.qty_current||0),0);
+
+    const delta = target - current;
+    if(delta === 0){ setMsg('ok', `✅ « ${title(colorName)} / ${typeName} » est déjà à ${target}.`); return; }
+
+    const { error: rerr } = await supabase.rpc('apply_move', {
+      p_color_id: colorId, p_delta: delta, p_note: `MAJ directe à ${target}`, p_type: typeName
+    });
+    if(rerr){ setMsg('err', "❌ Écriture stock: " + rerr.message); return; }
+
+    setMsg('ok', `✅ « ${title(colorName)} / ${typeName} » : ${current} → ${target}`);
+    document.getElementById('qtyInput').value = "";
+    await loadStock();
+  }catch(e){ showFatal("Erreur ajout : " + e.message); }
+}
+
+/* Events + init */
+function init(){
+  try{
+    document.getElementById('addBtn').addEventListener('click', setExactQuantity);
+    document.getElementById('typeSelect').addEventListener('change', refreshRefBox);
+    refreshRefBox();
+    buildUniqueDropdown().then(loadStock);
+
+    // Live update
+    try {
+      supabase.channel('stock_changes')
+        .on('postgres_changes', {event:'*', schema:'public', table:'legs_stock'}, loadStock)
+        .subscribe();
+    } catch(_){}
+  }catch(e){ showFatal("Initialisation impossible : " + e.message); }
 }
 </script>
+</body>
+</html>
