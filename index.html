@@ -41,6 +41,14 @@
     .msg{min-height:1.4em;margin-top:8px}
     .msg.err{color:var(--danger)} .msg.ok{color:#0a7f2e} .msg.muted{color:#666}
     .ref{font-size:12px; color:#666; margin-top:6px}
+    .swatch {
+      display:inline-block;
+      width:14px; height:14px;
+      border-radius:50%;
+      margin-right:6px;
+      border:1px solid #ccc;
+      vertical-align:middle;
+    }
   </style>
 </head>
 <body>
@@ -176,9 +184,10 @@
       rows.forEach(r=>{
         const hex = colorHexFromName(r.color);
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="color:${hex}; font-weight:600">${titleCase(r.color)}</td>
-                        <td>${r.type || 'Grande table'}</td>
-                        <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
+        tr.innerHTML = `
+          <td><span class="swatch" style="background:${hex}"></span>${titleCase(r.color)}</td>
+          <td>${r.type || 'Grande table'}</td>
+          <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
         tbody.appendChild(tr);
       });
       setMsg('ok', rows.length ? "Stock chargé." : "Aucune ligne enregistrée.");
