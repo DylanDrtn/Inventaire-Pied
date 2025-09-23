@@ -19,7 +19,7 @@
     .h-left,.h-right{width:160px; display:flex; align-items:center; justify-content:center}
     .h-center{flex:1; text-align:center}
     header h1{margin:0; font-size:22px; letter-spacing:.2px}
-    .logo{height:48px; object-fit:contain; max-width:150px} /* pas de filtre, on affiche tel quel */
+    .logo{height:48px; object-fit:contain; max-width:150px}
     .wrap{max-width:980px; margin:0 auto; padding:16px}
     .status{
       display:inline-flex; align-items:center; gap:8px;
@@ -46,7 +46,6 @@
 <body>
   <header>
     <div class="h-left">
-      <!-- 🟢 Logo Fermob local (met le fichier fermob.png à la racine du dépôt) -->
       <img class="logo" alt="Fermob" src="./fermob.png"
            onerror="this.style.display='none';document.getElementById('fermobTxt').style.display='inline'">
       <span id="fermobTxt" style="display:none;font-weight:700">Fermob</span>
@@ -58,7 +57,6 @@
       </div>
     </div>
     <div class="h-right">
-      <!-- 🟢 Logo Rodet local (met le fichier rodet.png à la racine du dépôt) -->
       <img class="logo" alt="Rodet" src="./rodet.png"
            onerror="this.style.display='none';document.getElementById('rodetTxt').style.display='inline'">
       <span id="rodetTxt" style="display:none;font-weight:700">Rodet</span>
@@ -110,10 +108,45 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const $ = sel => document.querySelector(sel);
     const TYPE_REFS = { "Petite table":"14x8 / 8x8", "Grande table":"165x10 / 207x10" };
+    const $ = sel => document.querySelector(sel);
     const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
+
+    // Couleurs Fermob hex
+    const COLOR_HEX = {
+      "anthracite": "#474747",
+      "beige latte": "#D7C9B8",
+      "blanc coton": "#F5F5F5",
+      "bleu abysse": "#0E3A5B",
+      "bleu acapulco": "#2F6F9E",
+      "bleu maya": "#6FA8DC",
+      "cactus": "#5A7D3A",
+      "capucine": "#E85C41",
+      "carbone": "#2B2B2B",
+      "cerise noire": "#61112A",
+      "citron givré": "#E6E879",
+      "gris argile": "#9C9B95",
+      "gris lapili": "#BEBDB8",
+      "gris orage": "#6D6E71",
+      "guimauve": "#E6C4D3",
+      "miel": "#C08A2C",
+      "muscat": "#A4B500",
+      "noisette": "#8E6B3D",
+      "olive": "#6D7C3A",
+      "opaline": "#BBD6D6",
+      "piment": "#B72227",
+      "romarin": "#8AA38B",
+      "rose praline": "#E37A8E",
+      "sauge": "#9DB8A2",
+      "rouille": "#A34E2E",
+      "verveine": "#C7E15E"
+    };
+
+    function colorHexFromName(name){
+      const k = norm(name);
+      return COLOR_HEX[k] || "#222";
+    }
 
     function setMsg(kind, txt){ const m=$("#msg"); m.className="msg "+kind; m.textContent=txt; }
     function setStatus(kind, text){
@@ -141,8 +174,11 @@
       const rows = (data||[]).filter(r => (r.qty_current ?? 0) > 0);
       const tbody = $("#stockBody"); tbody.innerHTML = '';
       rows.forEach(r=>{
+        const hex = colorHexFromName(r.color);
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${titleCase(r.color)}</td><td>${r.type||'Grande table'}</td><td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
+        tr.innerHTML = `<td style="color:${hex}; font-weight:600">${titleCase(r.color)}</td>
+                        <td>${r.type || 'Grande table'}</td>
+                        <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
         tbody.appendChild(tr);
       });
       setMsg('ok', rows.length ? "Stock chargé." : "Aucune ligne enregistrée.");
