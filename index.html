@@ -54,8 +54,7 @@
 <body>
   <header>
     <div class="h-left">
-      <img class="logo" alt="Fermob" src="./fermob.png"
-           onerror="this.style.display='none';document.getElementById('fermobTxt').style.display='inline'">
+      <img id="fermobLogo" class="logo" alt="Fermob" src="./fermob.png">
       <span id="fermobTxt" style="display:none;font-weight:700">Fermob</span>
     </div>
     <div class="h-center">
@@ -65,8 +64,7 @@
       </div>
     </div>
     <div class="h-right">
-      <img class="logo" alt="Rodet" src="./rodet.png"
-           onerror="this.style.display='none';document.getElementById('rodetTxt').style.display='inline'">
+      <img id="rodetLogo" class="logo" alt="Rodet" src="./rodet.png">
       <span id="rodetTxt" style="display:none;font-weight:700">Rodet</span>
     </div>
   </header>
@@ -112,6 +110,11 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
+    // Ajout d’un timestamp pour forcer le rafraîchissement
+    const versionParam = '?v=' + new Date().getTime();
+    document.getElementById('fermobLogo').src = './fermob.png' + versionParam;
+    document.getElementById('rodetLogo').src = './rodet.png' + versionParam;
+
     const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -121,39 +124,7 @@
     const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
 
-    // Couleurs Fermob hex connues
-    const COLOR_HEX = {
-      "anthracite": "#474747",
-      "beige latte": "#D7C9B8",
-      "blanc coton": "#F5F5F5",
-      "bleu abysse": "#0E3A5B",
-      "bleu acapulco": "#2F6F9E",
-      "bleu maya": "#6FA8DC",
-      "cactus": "#5A7D3A",
-      "capucine": "#E85C41",
-      "carbone": "#2B2B2B",
-      "cerise noire": "#61112A",
-      "citron givré": "#E6E879",
-      "gris argile": "#9C9B95",
-      "gris lapili": "#BEBDB8",
-      "gris orage": "#6D6E71",
-      "guimauve": "#E6C4D3",
-      "miel": "#C08A2C",
-      "muscat": "#A4B500",
-      "noisette": "#8E6B3D",
-      "olive": "#6D7C3A",
-      "opaline": "#BBD6D6",
-      "orange confite": "#E8832E",
-      "orange confit": "#E8832E",
-      "piment": "#B72227",
-      "romarin": "#8AA38B",
-      "rose praline": "#E37A8E",
-      "sauge": "#9DB8A2",
-      "rouille": "#A34E2E",
-      "verveine": "#C7E15E"
-    };
-
-    // Fallback automatique si non trouvé
+    // Fallback couleur
     function hashColor(str){
       const s = (str||"").toLowerCase().trim();
       let h = 0;
@@ -161,6 +132,14 @@
       const hue = Math.abs(h) % 360;
       return `hsl(${hue} 55% 45%)`;
     }
+
+    const COLOR_HEX = {
+      "orange confite": "#E8832E",
+      "orange confit": "#E8832E",
+      "cactus": "#5A7D3A",
+      "blanc coton": "#F5F5F5"
+      // ... tu peux compléter si tu veux
+    };
 
     function colorHexFromName(name){
       const k = norm(name);
