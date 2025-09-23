@@ -121,7 +121,7 @@
     const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
 
-    // Couleurs Fermob hex
+    // Couleurs Fermob hex connues
     const COLOR_HEX = {
       "anthracite": "#474747",
       "beige latte": "#D7C9B8",
@@ -143,6 +143,8 @@
       "noisette": "#8E6B3D",
       "olive": "#6D7C3A",
       "opaline": "#BBD6D6",
+      "orange confite": "#E8832E",
+      "orange confit": "#E8832E",
       "piment": "#B72227",
       "romarin": "#8AA38B",
       "rose praline": "#E37A8E",
@@ -151,9 +153,18 @@
       "verveine": "#C7E15E"
     };
 
+    // Fallback automatique si non trouvé
+    function hashColor(str){
+      const s = (str||"").toLowerCase().trim();
+      let h = 0;
+      for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; }
+      const hue = Math.abs(h) % 360;
+      return `hsl(${hue} 55% 45%)`;
+    }
+
     function colorHexFromName(name){
       const k = norm(name);
-      return COLOR_HEX[k] || "#222";
+      return COLOR_HEX[k] || hashColor(k);
     }
 
     function setMsg(kind, txt){ const m=$("#msg"); m.className="msg "+kind; m.textContent=txt; }
