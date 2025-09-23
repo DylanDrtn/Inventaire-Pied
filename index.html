@@ -3,104 +3,54 @@
 <head>
   <meta charset="UTF-8">
   <title>Inventaire Pied de Table</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      margin: 0; padding: 0;
-      text-align: center;
-    }
-    header {
-      background: #37474F;
-      color: white;
-      padding: 15px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    header h1 { margin: 0; font-size: 20px; }
-    main { padding: 20px; }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      width: 90%;
-      max-width: 800px;
-      background: white;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th { background: #eee; }
-    td.low { background: #ffdddd; }
-    .color-label {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      justify-content: center;
-    }
-    .color-dot {
-      width: 14px; height: 14px;
-      border-radius: 50%;
-      display: inline-block;
-      border: 1px solid #444;
-    }
-    form {
-      margin: 20px auto;
-      background: white;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      max-width: 400px;
-    }
-    button {
-      padding: 6px 12px;
-      margin-top: 10px;
-      cursor: pointer;
-    }
-    footer {
-      margin-top: 20px;
-      font-size: 13px;
-      color: #666;
-    }
-    footer img {
-      height: 30px;
-      margin-left: 10px;
-    }
+    body{font-family:Arial, sans-serif;background:#f9f9f9;margin:0;text-align:center;color:#222}
+    header{background:#37474F;color:#fff;padding:14px;display:flex;align-items:center;justify-content:space-between}
+    header h1{margin:0;font-size:20px}
+    header img{height:30px;margin-left:10px}
+    main{padding:16px}
+    form{margin:16px auto;background:#fff;max-width:420px;padding:14px;border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,.06)}
+    table{width:92%;max-width:900px;margin:18px auto;background:#fff;border-collapse:collapse}
+    th,td{border:1px solid #ddd;padding:8px}
+    th{background:#eee}
+    td.low{background:#ffe6e6}
+    .color-label{display:flex;align-items:center;gap:8px;justify-content:center}
+    .color-dot{width:14px;height:14px;border-radius:50%;display:inline-block;border:1px solid #444}
+    footer{margin:16px 0;color:#666;font-size:13px}
   </style>
 </head>
 <body>
   <header>
     <h1>Inventaire Pied de Table</h1>
     <div>
-      <img src="fermob.png" alt="Fermob" height="30">
-      <img src="rodet.png" alt="Rodet" height="30">
+      <img src="fermob.png" alt="Fermob">
+      <img src="rodet.png" alt="Rodet">
     </div>
   </header>
 
   <main>
     <form id="stockForm">
-      <label>Couleur :
-        <select id="colorSelect"></select>
-      </label><br><br>
-      <label>Quantité :
-        <input type="number" id="qtyInput" value="1" min="1">
-      </label><br><br>
-      <button type="submit">Ajouter</button>
+      <div>
+        <label>Couleur :
+          <select id="colorSelect"></select>
+        </label>
+      </div>
+      <div style="margin-top:10px">
+        <label>Quantité :
+          <input type="number" id="qtyInput" value="1" min="0">
+        </label>
+      </div>
+      <button type="submit" style="margin-top:10px">Ajouter</button>
     </form>
 
     <table>
-      <thead>
-        <tr><th>Couleur</th><th>Type</th><th>Quantité</th></tr>
-      </thead>
+      <thead><tr><th>Couleur</th><th>Type</th><th>Quantité</th></tr></thead>
       <tbody id="stockBody"></tbody>
     </table>
   </main>
 
-  <footer>
-    Inventaire connecté • Actualisation auto toutes les 30s
-  </footer>
+  <footer>Inventaire connecté • Actualisation auto toutes les 30s</footer>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
@@ -109,16 +59,19 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // Correction ciblée
+    // --- Correction couleurs spécifiques ---
+    function norm(str){ return (str||"").toLowerCase().trim(); }
     const COLOR_HEX = {
       "pain d'épices": "#986F31",
-      "pain d’epices": "#986F31" // apostrophe typographique
+      "pain d’epices": "#986F31",
+      "orange confite": "#9C4B1C",
+      "gris lapili": "#8C9491",
+      "gris lapilli": "#8C9491"
     };
-
-    function norm(str){ return (str||"").toLowerCase().trim(); }
     function colorHexFromName(name){
       const k = norm(name);
-      return COLOR_HEX[k] || "#444"; // fallback neutre
+      if (COLOR_HEX[k]) return COLOR_HEX[k];
+      return "#444"; // couleur neutre par défaut
     }
 
     async function loadStock(){
