@@ -43,6 +43,9 @@
     }
     button:hover{background:var(--brand-600); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(76,114,51,.18);}
     button:active{transform: translateY(0); box-shadow:none;}
+    .btn-small{
+      padding:6px 10px; font-size:14px; line-height:1;
+    }
 
     /* Tableau amélioré */
     table{
@@ -65,7 +68,6 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
       vertical-align:-2px;
     }
-    /* Type en badge lisible */
     tbody td:nth-child(2){
       font-weight:600;
       background:#eef5e9;
@@ -76,43 +78,12 @@
       margin:2px 0;
     }
 
-    /* Barre outils du tableau */
-    .tools{
-      display:flex; gap:8px; align-items:center; justify-content:space-between;
-      margin:6px 0 10px;
-    }
-    .tools .left, .tools .right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
-    .chip{
-      background:#fff; border:1px solid var(--line); border-radius:999px; padding:6px 10px; cursor:pointer;
-    }
-    .chip.active{ border-color: var(--brand-600); background:#eef5e9; }
-
-    /* Totaux */
-    .totals{
-      margin-top:10px; font-weight:600; color:#355a22;
-      display:flex; gap:12px; flex-wrap:wrap;
-    }
-    .totals .pill{
-      background:#eef5e9; border:1px solid #dbe8d8; border-radius:999px; padding:6px 10px;
-    }
-
-    /* Toasts (notif) */
-    .toast-wrap{ position: fixed; right: 16px; bottom: 16px; display:flex; flex-direction:column; gap:8px; z-index: 9999; }
-    .toast{
-      background:#fff; border-left:6px solid #16a34a; border:1px solid var(--line);
-      padding:10px 14px; border-radius:10px; box-shadow: 0 6px 18px rgba(0,0,0,.08);
-      min-width: 220px;
-    }
-    .toast.err{ border-left-color:#ef4444; }
-    .toast .small{ color:#666; font-size:12px; margin-top:4px; }
-
     /* Mobile */
     @media (max-width:640px){
       header h1{ font-size:18px; }
       .wrap{ padding:12px; }
       th, td{ padding:8px; font-size:14px; }
       .card{ padding:12px; }
-      .tools{ flex-direction:column; align-items:stretch; }
     }
   </style>
 </head>
@@ -153,7 +124,11 @@
 
         <div>
           <label>Quantité de pieds</label><br />
-          <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px" />
+          <div style="display:flex; gap:6px; align-items:center">
+            <button type="button" id="minusBtn" class="btn-small">−1</button>
+            <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:100px" />
+            <button type="button" id="plusBtn" class="btn-small">+1</button>
+          </div>
         </div>
 
         <div>
@@ -165,38 +140,17 @@
     </div>
 
     <div class="card">
-      <div class="tools">
-        <div class="left">
-          <h3 style="margin:0">Stock par couleur et type</h3>
-        </div>
-        <div class="right">
-          <input id="filterInput" type="text" placeholder="Rechercher une couleur…" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;width:200px">
-          <button id="sortName" class="chip" title="Trier par nom">Nom A→Z</button>
-          <button id="sortQty" class="chip" title="Trier par stock">Stock ⬇︎</button>
-        </div>
-      </div>
-
+      <h3 style="margin:0 0 10px">Stock par couleur et type</h3>
       <table>
         <thead><tr><th>Couleur</th><th>Type</th><th>Stock</th></tr></thead>
         <tbody id="stockBody"></tbody>
       </table>
-
-      <div id="totals" class="totals" aria-live="polite"></div>
     </div>
   </div>
-
-  <div id="toastWrap" class="toast-wrap" aria-live="polite"></div>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module">
     import { COLOR_HEX } from "./colors.js";
-
-    // Anti-cache logos
-    const versionParam='?v='+new Date().getTime();
-    document.getElementById('fermobLogo').src='./fermob.png'+versionParam;
-    document.getElementById('rodetLogo').src='./rodet.png'+versionParam;
-
-    // Supabase
     const SUPABASE_URL="https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
@@ -209,17 +163,7 @@
     function setMsg(kind,txt){const m=$("#msg");m.className="msg "+kind;m.textContent=txt;}
     function setStatus(kind,text){const d=$("#statusDot"),t=$("#statusText");d.className="dot "+(kind==="ok"?"ok":kind==="bad"?"bad":"warn");t.textContent=text;}
     function refreshRef(){const t=$("#typeSelect").value;$("#refBox").textContent="Réf : "+(TYPE_REFS[t]||"-");}
-    function toast(txt, kind='ok'){
-      const wrap = $("#toastWrap");
-      const el = document.createElement('div');
-      el.className = 'toast ' + (kind==='err'?'err':'ok');
-      el.innerHTML = `<div>${txt}</div><div class="small">${new Date().toLocaleTimeString()}</div>`;
-      wrap.appendChild(el);
-      setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(6px)'; }, 2800);
-      setTimeout(()=>{ wrap.removeChild(el); }, 3400);
-    }
 
-    // Fallback couleur (si pas d’hex connu)
     function hashColor(str){
       const s=(str||"").toLowerCase().trim();let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
       const hue=Math.abs(h)%360;return `hsl(${hue} 55% 45%)`;
@@ -249,39 +193,11 @@
       return hashColor(k);
     }
 
-    // ——— Tableau + outils ———
-    let FULL_ROWS = [];      // toutes les lignes (qty>0 depuis la base)
-    let VIEW_ROWS = [];      // lignes après filtre/tri
-    let SORT_NAME_ASC = true;
-    let SORT_QTY_DESC = true;
-
-    function applyFilterSort(){
-      const q = norm($("#filterInput").value);
-      // filtre
-      VIEW_ROWS = FULL_ROWS.filter(r => !q || norm(r.color).includes(q));
-      // tri
-      const byName = (a,b)=> norm(a.color).localeCompare(norm(b.color));
-      const byQty  = (a,b)=> (b.qty_current??0) - (a.qty_current??0);
-      // priorité au dernier bouton cliqué (géré par setActiveChip)
-      if($("#sortQty").classList.contains('active')){
-        VIEW_ROWS.sort(byQty);
-        if(!SORT_QTY_DESC) VIEW_ROWS.reverse();
-      }else{
-        VIEW_ROWS.sort(byName);
-        if(!SORT_NAME_ASC) VIEW_ROWS.reverse();
-      }
-      renderTable(VIEW_ROWS);
-      renderTotals(VIEW_ROWS);
-    }
-
-    function setActiveChip(btn){
-      $("#sortName").classList.remove('active');
-      $("#sortQty").classList.remove('active');
-      btn.classList.add('active');
-    }
-
-    function renderTable(rows){
-      const tb=$("#stockBody"); tb.innerHTML='';
+    async function loadStock(){
+      const {data,error}=await sb.from('v_stock').select('*');
+      if(error){setMsg('err',"Lecture stock: "+error.message);return;}
+      const rows=(data||[]).filter(r=>(r.qty_current??0)>0);
+      const tb=$("#stockBody");tb.innerHTML='';
       rows.forEach(r=>{
         const hex=hexForDisplay(r.color);
         const tr=document.createElement('tr');
@@ -293,48 +209,22 @@
       setMsg('ok',rows.length?"Stock chargé.":"Aucune ligne enregistrée.");
     }
 
-    function renderTotals(rows){
-      let petite=0, grande=0, total=0;
-      for(const r of rows){
-        const q = r.qty_current ?? 0;
-        total += q;
-        if((r.type||'Grande table') === 'Petite table') petite += q;
-        else grande += q;
-      }
-      $("#totals").innerHTML = `
-        <div class="pill">Petite table : ${petite}</div>
-        <div class="pill">Grande table : ${grande}</div>
-        <div class="pill">Total : ${total}</div>
-      `;
-    }
-
-    async function loadStock(){
-      const {data,error}=await sb.from('v_stock').select('*');
-      if(error){setMsg('err',"Lecture stock: "+error.message);return;}
-      const rows=(data||[]).filter(r=>(r.qty_current??0)>0);
-      FULL_ROWS = rows.slice(); // copie
-      applyFilterSort();
-    }
-
     async function addExact(){
       setMsg('muted',"⏳ Traitement…");
       const colorId=Number($("#colorSelect").value);
       const colorName=$("#colorSelect").selectedOptions[0]?.textContent||'';
       const type=$("#typeSelect").value;
       const target=Number($("#qtyInput").value);
-      if(!Number.isFinite(colorId)) { setMsg('err',"❌ Choisis une couleur."); return; }
-      if(!type) { setMsg('err',"❌ Choisis un type."); return; }
-      if(!Number.isFinite(target)||target<0) { setMsg('err',"❌ Quantité (≥ 0)."); return; }
-
+      if(!Number.isFinite(colorId)) return setMsg('err',"❌ Choisis une couleur.");
+      if(!type) return setMsg('err',"❌ Choisis un type.");
+      if(!Number.isFinite(target)||target<0) return setMsg('err',"❌ Quantité (≥ 0).");
       const {data:cur,error:cerr}=await sb.from('legs_stock').select('qty').eq('color_id',colorId).eq('type',type).maybeSingle();
-      if(cerr){ setMsg('err',"❌ Lecture stock actuel: "+cerr.message); toast("Échec lecture stock", "err"); return; }
+      if(cerr){setMsg('err',"❌ Lecture stock actuel: "+cerr.message);return;}
       const current=cur?.qty??0; const delta=target-current;
-      if(delta===0){ setMsg('ok',`✅ « ${colorName} / ${type} » est déjà à ${target}.`); toast("Aucune modification", "ok"); return; }
-
+      if(delta===0){setMsg('ok',`✅ « ${colorName} / ${type} » est déjà à ${target}.`);return;}
       const {error:rerr}=await sb.rpc('apply_move',{p_color_id:colorId,p_delta:delta,p_note:`MAJ ${current}→${target}`,p_type:type});
-      if(rerr){ setMsg('err',"❌ Écriture stock: "+rerr.message); toast("Échec écriture stock", "err"); return; }
+      if(rerr){setMsg('err',"❌ Écriture stock: "+rerr.message);return;}
       setMsg('ok',`✅ « ${colorName} / ${type} » : ${current} → ${target}`);
-      toast(`Stock mis à jour : ${colorName} (${type}) → ${target}`, "ok");
       $("#qtyInput").value=""; await loadStock();
     }
 
@@ -348,23 +238,14 @@
     }
 
     async function init(){
-      // actions
       $("#addBtn").addEventListener('click',addExact);
       $("#typeSelect").addEventListener('change',refreshRef);
-      $("#filterInput").addEventListener('input', applyFilterSort);
-      $("#sortName").addEventListener('click', ()=>{
-        SORT_NAME_ASC = !SORT_NAME_ASC;
-        setActiveChip($("#sortName"));
-        $("#sortName").textContent = SORT_NAME_ASC ? "Nom A→Z" : "Nom Z→A";
-        applyFilterSort();
+      $("#minusBtn").addEventListener('click',()=>{ 
+        const inp=$("#qtyInput"); inp.value= Math.max(0,(+inp.value||0)-1); 
       });
-      $("#sortQty").addEventListener('click', ()=>{
-        SORT_QTY_DESC = !SORT_QTY_DESC;
-        setActiveChip($("#sortQty"));
-        $("#sortQty").textContent = SORT_QTY_DESC ? "Stock ⬇︎" : "Stock ⬆︎";
-        applyFilterSort();
+      $("#plusBtn").addEventListener('click',()=>{ 
+        const inp=$("#qtyInput"); inp.value= (+inp.value||0)+1; 
       });
-      setActiveChip($("#sortQty")); // par défaut : tri par stock décroissant
       refreshRef();
 
       await loadColors();
