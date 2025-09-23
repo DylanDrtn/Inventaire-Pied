@@ -42,12 +42,8 @@
     .msg.err{color:var(--danger)} .msg.ok{color:#0a7f2e} .msg.muted{color:#666}
     .ref{font-size:12px; color:#666; margin-top:6px}
     .swatch {
-      display:inline-block;
-      width:14px; height:14px;
-      border-radius:50%;
-      margin-right:6px;
-      border:1px solid #ccc;
-      vertical-align:middle;
+      display:inline-block; width:14px; height:14px; border-radius:50%;
+      margin-right:6px; border:1px solid #ccc; vertical-align:middle; cursor:pointer;
     }
   </style>
 </head>
@@ -110,41 +106,21 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // Ajout d’un timestamp pour forcer le rafraîchissement
+    // --- anti-cache logos ---
     const versionParam = '?v=' + new Date().getTime();
     document.getElementById('fermobLogo').src = './fermob.png' + versionParam;
     document.getElementById('rodetLogo').src = './rodet.png' + versionParam;
 
+    // --- Supabase ---
     const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
+    // --- helpers ---
     const TYPE_REFS = { "Petite table":"14x8 / 8x8", "Grande table":"165x10 / 207x10" };
     const $ = sel => document.querySelector(sel);
     const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
-
-    // Fallback couleur
-    function hashColor(str){
-      const s = (str||"").toLowerCase().trim();
-      let h = 0;
-      for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; }
-      const hue = Math.abs(h) % 360;
-      return `hsl(${hue} 55% 45%)`;
-    }
-
-    const COLOR_HEX = {
-      "orange confite": "#E8832E",
-      "orange confit": "#E8832E",
-      "cactus": "#5A7D3A",
-      "blanc coton": "#F5F5F5"
-      // ... tu peux compléter si tu veux
-    };
-
-    function colorHexFromName(name){
-      const k = norm(name);
-      return COLOR_HEX[k] || hashColor(k);
-    }
 
     function setMsg(kind, txt){ const m=$("#msg"); m.className="msg "+kind; m.textContent=txt; }
     function setStatus(kind, text){
@@ -154,28 +130,63 @@
     }
     function refreshRef(){ const t=$("#typeSelect").value; $("#refBox").textContent = "Réf : " + (TYPE_REFS[t]||"-"); }
 
-    async function buildColors(){
-      const sel = $("#colorSelect");
-      const { data, error } = await sb.from('colors').select('id,name').eq('active', true).order('name');
-      if(error){ setMsg('err',"Lecture couleurs: "+error.message); return; }
-      const map = new Map();
-      for(const r of (data||[])){ const k=norm(r.name); if(k && !map.has(k)) map.set(k,{id:r.id,name:titleCase(r.name)}); }
-      sel.innerHTML = '';
-      [...map.values()].sort((a,b)=>a.name.localeCompare(b.name)).forEach(({id,name})=>{
-        const opt=document.createElement('option'); opt.value=String(id); opt.textContent=name; sel.appendChild(opt);
-      });
+    // --- couleurs depuis la base ---
+    const HEX_BY_NAME = new Map();   // nom normalisé -> hex
+    const ID_BY_NAME  = new Map();   // nom normalisé -> id
+
+    // couleur fallback si non renseignée
+    function hashColor(str){
+      const s = (str||"").toLowerCase().trim();
+      let h = 0; for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; }
+      const hue = Math.abs(h) % 360;
+      return `hsl(${hue} 55% 45%)`;
+    }
+    function colorHexFromName(name){
+      const k = norm(name);
+      const hex = HEX_BY_NAME.get(k);
+      return (hex && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) ? hex : hashColor(k);
     }
 
+    async function loadColors(){
+      const { data, error } = await sb.from('colors')
+        .select('id,name,hex')
+        .eq('active', true)
+        .order('name');
+      if(error){ setMsg('err',"Lecture couleurs: "+error.message); return; }
+
+      HEX_BY_NAME.clear(); ID_BY_NAME.clear();
+      const sel = $("#colorSelect"); sel.innerHTML = '';
+
+      const seen = new Set();
+      for(const r of (data||[])){
+        const k = norm(r.name);
+        if(!seen.has(k)){ seen.add(k);
+          ID_BY_NAME.set(k, r.id);
+          if(r.hex) HEX_BY_NAME.set(k, r.hex);
+
+          const opt = document.createElement('option');
+          opt.value = String(r.id);
+          opt.textContent = titleCase(r.name);
+          sel.appendChild(opt);
+        }
+      }
+    }
+
+    // --- tableau stock ---
     async function loadStock(){
       const { data, error } = await sb.from('v_stock').select('*');
       if(error){ setMsg('err',"Lecture stock: "+error.message); return; }
       const rows = (data||[]).filter(r => (r.qty_current ?? 0) > 0);
+
       const tbody = $("#stockBody"); tbody.innerHTML = '';
       rows.forEach(r=>{
         const hex = colorHexFromName(r.color);
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td><span class="swatch" style="background:${hex}"></span>${titleCase(r.color)}</td>
+          <td>
+            <span class="swatch" data-color="${r.color}" title="Cliquer pour corriger" style="background:${hex}"></span>
+            ${titleCase(r.color)}
+          </td>
           <td>${r.type || 'Grande table'}</td>
           <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
         tbody.appendChild(tr);
@@ -183,6 +194,38 @@
       setMsg('ok', rows.length ? "Stock chargé." : "Aucune ligne enregistrée.");
     }
 
+    // --- correction d'une teinte (clic sur pastille) ---
+    async function saveColorHexByName(name, newHex){
+      const k = norm(name);
+      const colorId = ID_BY_NAME.get(k);
+      if(!colorId) return setMsg('err', "Couleur inconnue en base.");
+
+      const { error } = await sb.from('colors').update({ hex: newHex }).eq('id', colorId);
+      if(error){ setMsg('err', "Sauvegarde hex: " + error.message); return; }
+
+      HEX_BY_NAME.set(k, newHex);
+      setMsg('ok', `Teinte mise à jour pour « ${titleCase(name)} » (${newHex}).`);
+      await loadStock();
+    }
+
+    // déléguée sur le tableau
+    document.addEventListener('click', (e)=>{
+      const sw = e.target.closest('.swatch');
+      if(!sw) return;
+      const name = sw.getAttribute('data-color');
+      const current = colorHexFromName(name);
+      const input = document.createElement('input');
+      input.type = 'color';
+      // si couleur générée (hsl), mets un défaut
+      input.value = /^#/.test(current) ? current : '#888888';
+      input.style.position = 'fixed'; input.style.left = '-9999px';
+      document.body.appendChild(input);
+      input.addEventListener('input', ()=>{ sw.style.background = input.value; });
+      input.addEventListener('change', ()=>{ saveColorHexByName(name, input.value); document.body.removeChild(input); });
+      input.click();
+    });
+
+    // --- actions ---
     async function addExact(){
       setMsg('muted', "⏳ Traitement…");
       const colorId = Number($("#colorSelect").value);
@@ -204,6 +247,7 @@
       await loadStock();
     }
 
+    // --- état connexion ---
     async function checkConnection(){
       try{
         if(!navigator.onLine){ setStatus('warn','⚠️ Hors ligne (navigateur)'); return; }
@@ -213,19 +257,26 @@
       }catch{ setStatus('bad','❌ Erreur de connexion'); }
     }
 
+    // --- init ---
     async function init(){
+      $("#addBtn").addEventListener('click', addExact);
+      $("#typeSelect").addEventListener('change', refreshRef);
       refreshRef();
-      await buildColors();
+
+      await loadColors();     // charge noms + hex + ids
       await loadStock();
       await checkConnection();
-      sb.channel('stock_changes').on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock()).subscribe();
+
+      // temps réel
+      sb.channel('stock_changes')
+        .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
+        .subscribe();
+
+      // secours
       setInterval(loadStock, 30000);
       window.addEventListener('online', () => { setStatus('warn','⏳ Reconnexion…'); loadStock().then(checkConnection); });
       window.addEventListener('offline', () => setStatus('warn','⚠️ Hors ligne'));
     }
-
-    document.getElementById('addBtn').addEventListener('click', addExact);
-    document.getElementById('typeSelect').addEventListener('change', refreshRef);
 
     init();
   </script>
