@@ -24,24 +24,62 @@
     .status{
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px; border-radius:999px; font-size:14px; border:1px solid var(--line);
-      background:#fff; color:#333;
+      background:rgba(255,255,255,.92); color:#333;
+      box-shadow: 0 1px 4px rgba(0,0,0,.05);
     }
     .dot{width:10px;height:10px;border-radius:50%;}
     .ok{background:#16a34a}.warn{background:#f59e0b}.bad{background:#ef4444}
-    .card{background:#fff;border:1px solid var(--line);border-radius:14px; padding:16px; margin-top:16px}
+    .card{
+      background:#fff;border:1px solid var(--line);border-radius:14px; padding:16px; margin-top:16px;
+      box-shadow: 0 6px 18px rgba(0,0,0,.06);
+    }
     label{font-weight:600}
     input,select{padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
-    button{padding:10px 14px;border:1px solid var(--brand-600);border-radius:10px;background:var(--brand);color:#fff;cursor:pointer}
-    button:hover{background:var(--brand-600)}
-    table{width:100%;border-collapse:collapse;background:#fff}
+    button{
+      padding:10px 14px;border:1px solid var(--brand-600);border-radius:10px;background:var(--brand);color:#fff;cursor:pointer;
+      transition: transform .06s ease, background .2s ease, box-shadow .2s ease;
+    }
+    button:hover{background:var(--brand-600); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(76,114,51,.18);}
+    button:active{transform: translateY(0); box-shadow:none;}
+    table{
+      width:100%;border-collapse:separate;border-spacing:0;background:#fff;
+      border:1px solid var(--line); border-radius:12px; overflow:hidden;
+    }
     th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
-    th{background:#f3f6ef}
+    th{background:#f3f6ef; letter-spacing:.2px;}
+    td{line-height:1.3;}
     td.low{color:var(--danger);font-weight:700}
+    tbody tr:nth-child(even){ background:#fafafa; }
+    tbody tr:hover{ background:#f1f6ed; }
     .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
     .msg{min-height:1.4em;margin-top:8px}
     .msg.err{color:var(--danger)} .msg.ok{color:#0a7f2e} .msg.muted{color:#666}
     .ref{font-size:12px; color:#666; margin-top:6px}
-    .swatch{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:6px;border:1px solid #ccc;vertical-align:middle}
+    .swatch{
+      display:inline-block;width:16px;height:16px;border-radius:50%;margin-right:6px;
+      border:1px solid rgba(0,0,0,.2);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
+      vertical-align:-2px;
+    }
+
+    /* Type en badge lisible */
+    tbody td:nth-child(2){
+      font-weight:600;
+      background:#eef5e9;
+      color:#355a22;
+      border-radius:999px;
+      padding:6px 10px;
+      display:inline-block;
+      margin:2px 0;
+    }
+
+    /* Mobile */
+    @media (max-width:640px){
+      header h1{ font-size:18px; }
+      .wrap{ padding:12px; }
+      th, td{ padding:8px; font-size:14px; }
+      .card{ padding:12px; }
+    }
   </style>
 </head>
 <body>
@@ -101,19 +139,12 @@
     </div>
   </div>
 
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
-    import { COLOR_HEX } from "./colors.js"; // ✅ import externe
-
-    // Anti-cache logos
-    const versionParam='?v='+new Date().getTime();
-    document.getElementById('fermobLogo').src='./fermob.png'+versionParam;
-    document.getElementById('rodetLogo').src='./rodet.png'+versionParam;
-
-    // Supabase
+    import { COLOR_HEX } from "./colors.js";
     const SUPABASE_URL="https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
-    const sb=createClient(SUPABASE_URL,SUPABASE_KEY);
+    const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
     // Helpers
     const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
@@ -124,21 +155,11 @@
     function setStatus(kind,text){const d=$("#statusDot"),t=$("#statusText");d.className="dot "+(kind==="ok"?"ok":kind==="bad"?"bad":"warn");t.textContent=text;}
     function refreshRef(){const t=$("#typeSelect").value;$("#refBox").textContent="Réf : "+(TYPE_REFS[t]||"-");}
 
-    // Fallback couleur (si pas d’hex connu)
     function hashColor(str){
       const s=(str||"").toLowerCase().trim();let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
       const hue=Math.abs(h)%360;return `hsl(${hue} 55% 45%)`;
     }
 
-    function hexForDisplay(name){
-      const k=norm(name);
-      const fromDb=HEX_BY_NAME.get(k);
-      if(fromDb && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(fromDb)) return fromDb;
-      const fromLocal=COLOR_HEX[k]; if(fromLocal) return fromLocal;
-      return hashColor(k); // dernier recours
-    }
-
-    // Cache des couleurs lues depuis la base
     const HEX_BY_NAME=new Map();
     async function loadColors(){
       const {data,error}=await sb.from('colors').select('id,name,hex').eq('active',true).order('name');
@@ -153,6 +174,14 @@
           const opt=document.createElement('option');opt.value=String(r.id);opt.textContent=titleCase(r.name);sel.appendChild(opt);
         }
       }
+    }
+
+    function hexForDisplay(name){
+      const k=norm(name);
+      const fromDb=HEX_BY_NAME.get(k);
+      if(fromDb && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(fromDb)) return fromDb;
+      const fromLocal=COLOR_HEX[k]; if(fromLocal) return fromLocal;
+      return hashColor(k);
     }
 
     async function loadStock(){
