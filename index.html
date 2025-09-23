@@ -1,232 +1,199 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>Inventaire Pied de Table</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
-    :root{
-      --brand:#5a7d3a; --brand-600:#4f7133;
-      --bg:#f9f9f9; --line:#e5e7eb; --danger:#b00020;
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      margin: 0; padding: 0;
+      text-align: center;
     }
-    *{box-sizing:border-box}
-    body{font-family:Arial,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;background:var(--bg);color:#222}
-    header{
-      display:flex; align-items:center; gap:12px;
-      padding:12px 16px; border-bottom:1px solid var(--line);
-      background:linear-gradient(0deg,var(--brand-600),var(--brand)); color:#fff;
+    header {
+      background: #37474F;
+      color: white;
+      padding: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
-    .h-left,.h-right{width:160px; display:flex; align-items:center; justify-content:center}
-    .h-center{flex:1; text-align:center}
-    header h1{margin:0; font-size:22px; letter-spacing:.2px}
-    .logo{height:48px; object-fit:contain; max-width:150px}
-    .wrap{max-width:980px; margin:0 auto; padding:16px}
-    .status{
-      display:inline-flex; align-items:center; gap:8px;
-      padding:8px 12px; border-radius:999px; font-size:14px; border:1px solid var(--line);
-      background:#fff; color:#333;
+    header h1 { margin: 0; font-size: 20px; }
+    main { padding: 20px; }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      width: 90%;
+      max-width: 800px;
+      background: white;
     }
-    .dot{width:10px;height:10px;border-radius:50%;}
-    .ok{background:#16a34a}.warn{background:#f59e0b}.bad{background:#ef4444}
-    .card{background:#fff;border:1px solid var(--line);border-radius:14px; padding:16px; margin-top:16px}
-    label{font-weight:600}
-    input,select{padding:10px;border:1px solid var(--line);border-radius:10px;background:#fff}
-    button{padding:10px 14px;border:1px solid var(--brand-600);border-radius:10px;background:var(--brand);color:#fff;cursor:pointer}
-    button:hover{background:var(--brand-600)}
-    table{width:100%;border-collapse:collapse;background:#fff}
-    th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
-    th{background:#f3f6ef}
-    td.low{color:var(--danger);font-weight:700}
-    .row{display:flex;gap:12px;flex-wrap:wrap;align-items:end}
-    .msg{min-height:1.4em;margin-top:8px}
-    .msg.err{color:var(--danger)} .msg.ok{color:#0a7f2e} .msg.muted{color:#666}
-    .ref{font-size:12px; color:#666; margin-top:6px}
-    .swatch{display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:6px;border:1px solid #ccc;vertical-align:middle}
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+    th { background: #eee; }
+    td.low { background: #ffdddd; }
+    .color-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+    .color-dot {
+      width: 14px; height: 14px;
+      border-radius: 50%;
+      display: inline-block;
+      border: 1px solid #444;
+    }
+    form {
+      margin: 20px auto;
+      background: white;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      max-width: 400px;
+    }
+    button {
+      padding: 6px 12px;
+      margin-top: 10px;
+      cursor: pointer;
+    }
+    footer {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #666;
+    }
+    footer img {
+      height: 30px;
+      margin-left: 10px;
+    }
   </style>
 </head>
 <body>
   <header>
-    <div class="h-left">
-      <img id="fermobLogo" class="logo" alt="Fermob" src="./fermob.png">
-      <span id="fermobTxt" style="display:none;font-weight:700">Fermob</span>
-    </div>
-    <div class="h-center">
-      <h1>Inventaire Pied de Table</h1>
-      <div id="status" class="status" title="État de la connexion">
-        <span id="statusDot" class="dot warn"></span><span id="statusText">⏳ Vérification…</span>
-      </div>
-    </div>
-    <div class="h-right">
-      <img id="rodetLogo" class="logo" alt="Rodet" src="./rodet.png">
-      <span id="rodetTxt" style="display:none;font-weight:700">Rodet</span>
+    <h1>Inventaire Pied de Table</h1>
+    <div>
+      <img src="fermob.png" alt="Fermob" height="30">
+      <img src="rodet.png" alt="Rodet" height="30">
     </div>
   </header>
 
-  <div class="wrap">
-    <div class="card">
-      <div class="row">
-        <div style="flex:1 1 260px">
-          <label>Couleur</label><br />
-          <select id="colorSelect"></select>
-        </div>
+  <main>
+    <form id="stockForm">
+      <label>Couleur :
+        <select id="colorSelect"></select>
+      </label><br><br>
+      <label>Quantité :
+        <input type="number" id="qtyInput" value="1" min="1">
+      </label><br><br>
+      <button type="submit">Ajouter</button>
+    </form>
 
-        <div style="flex:1 1 220px">
-          <label>Type de pied</label><br />
-          <select id="typeSelect">
-            <option value="Petite table">Petite table</option>
-            <option value="Grande table">Grande table</option>
-          </select>
-          <div id="refBox" class="ref"></div>
-        </div>
+    <table>
+      <thead>
+        <tr><th>Couleur</th><th>Type</th><th>Quantité</th></tr>
+      </thead>
+      <tbody id="stockBody"></tbody>
+    </table>
+  </main>
 
-        <div>
-          <label>Quantité de pieds</label><br />
-          <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px" />
-        </div>
+  <footer>
+    Inventaire connecté • Actualisation auto toutes les 30s
+  </footer>
 
-        <div>
-          <button id="addBtn"><b>Ajouter</b></button>
-        </div>
-      </div>
-      <div id="msg" class="msg"></div>
-      <p class="msg muted" style="margin:6px 0 0">“Ajouter” met le stock <b>exact</b> (le site calcule la différence automatiquement).</p>
-    </div>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
 
-    <div class="card">
-      <h3 style="margin:0 0 10px">Stock par couleur et type</h3>
-      <table>
-        <thead><tr><th>Couleur</th><th>Type</th><th>Stock</th></tr></thead>
-        <tbody id="stockBody"></tbody>
-      </table>
-    </div>
-  </div>
+    const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
+    const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
+    const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
-    // Anti-cache logos
-    const versionParam='?v='+new Date().getTime();
-    document.getElementById('fermobLogo').src='./fermob.png'+versionParam;
-    document.getElementById('rodetLogo').src='./rodet.png'+versionParam;
-
-    // Supabase
-    const SUPABASE_URL="https://ytoxpennisgfzdtpxmgh.supabase.co";
-    const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
-    const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
-
-    // Helpers
-    const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
-    const $=sel=>document.querySelector(sel);
-    const norm=s=>(s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
-    const titleCase=s=>(s||"").toLowerCase().replace(/\S+/g,w=>w.charAt(0).toUpperCase()+w.slice(1));
-    function setMsg(kind,txt){const m=$("#msg");m.className="msg "+kind;m.textContent=txt;}
-    function setStatus(kind,text){const d=$("#statusDot"),t=$("#statusText");d.className="dot "+(kind==="ok"?"ok":kind==="bad"?"bad":"warn");t.textContent=text;}
-    function refreshRef(){const t=$("#typeSelect").value;$("#refBox").textContent="Réf : "+(TYPE_REFS[t]||"-");}
-
-    // Fallback couleur (si pas d’hex connu)
-    function hashColor(str){
-      const s=(str||"").toLowerCase().trim();let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
-      const hue=Math.abs(h)%360;return `hsl(${hue} 55% 45%)`;
-    }
-
-    // Dictionnaire interne (tu peux compléter si besoin)
-    const COLOR_HEX={
-      "blanc coton":"#F1F2F3","gris orage":"#6D6E71","gris argile":"#9C9B95","gris lapili":"#BEBDB8",
-      "carbone":"#2B2B2B","anthracite":"#474747",
-      "bleu abysse":"#0E3A5B","bleu acapulco":"#2F6F9E","bleu maya":"#2B4DA3",
-      "cactus":"#5A7D3A","romarin":"#8AA38B","rouille":"#A34E2E","piment":"#B72227",
-      "capucine":"#E85C41","cerise noire":"#61112A","beige latte":"#D7C9B8",
-      "verveine":"#C7E15E","olive":"#6D7C3A","muscat":"#A4B500","miel":"#C08A2C",
-      "opaline":"#BBD6D6","guimauve":"#E6C4D3","rose praline":"#E37A8E",
-      "orange confite":"#E8832E","orange confit":"#E8832E","citron givré":"#E6E879","noisette":"#8E6B3D"
+    // === Mapping couleurs manuelles ===
+    const COLOR_HEX = {
+      "pain d'épices": "#986F31",
+      "pain d’epices": "#986F31", // apostrophe typographique
+      "orange confite": "#9C4B1C",
+      "orange confit": "#9C4B1C",
+      "gris argile": "#D1CCBE",
+      "gris lapilli": "#8C9491",
+      "gris lapili": "#8C9491",
+      "gris orage": "#657271",
+      "anthracite": "#3F4241",
+      "carbone": "#3F4241",
+      "bleu abysse": "#0C1B31",
+      "bleu abysses": "#0C1B31",
+      "bleu acapulco": "#174955",
+      "bleu maya": "#88B6D1",
+      "miel": "#E8AF03",
+      "citron givré": "#FFF7AD",
+      "romarin": "#61635B",
+      "cactus": "#778565",
+      "blanc coton": "#FFFEF6",
+      "réglisse": "#2B2B2C",
+      "tonka": "#4B443D",
+      "cerise noire": "#541827",
+      "piment": "#932426",
+      "ocre rouge": "#7F3D31",
+      "muscade": "#B4A28F",
+      "guimauve": "#CECAE6",
+      "menthe glaciale": "#E3F1E8",
+      "vert tilleul": "#A4A57E",
+      "pesto": "#5E5E31",
+      "vert cèdre": "#2A5644"
     };
 
-    // Cache des couleurs lues depuis la base
-    const HEX_BY_NAME=new Map(); // nom normalisé -> hex (depuis Supabase)
-    async function loadColors(){
-      const {data,error}=await sb.from('colors').select('id,name,hex').eq('active',true).order('name');
-      if(error){setMsg('err',"Lecture couleurs: "+error.message);return;}
-      HEX_BY_NAME.clear();
-      const sel=$("#colorSelect");sel.innerHTML='';
-      const seen=new Set();
-      for(const r of (data||[])){
-        const k=norm(r.name);
-        if(!seen.has(k)){seen.add(k);
-          if(r.hex) HEX_BY_NAME.set(k,r.hex);
-          const opt=document.createElement('option');opt.value=String(r.id);opt.textContent=titleCase(r.name);sel.appendChild(opt);
-        }
-      }
-    }
-
-    function hexForDisplay(name){
-      const k=norm(name);
-      const fromDb=HEX_BY_NAME.get(k);
-      if(fromDb && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(fromDb)) return fromDb;
-      const fromLocal=COLOR_HEX[k]; if(fromLocal) return fromLocal;
-      return hashColor(k); // dernier recours
+    function norm(str){ return (str||"").toLowerCase().trim(); }
+    function colorHexFromName(name){
+      const k = norm(name);
+      return COLOR_HEX[k] || "#444"; // fallback neutre
     }
 
     async function loadStock(){
-      const {data,error}=await sb.from('v_stock').select('*');
-      if(error){setMsg('err',"Lecture stock: "+error.message);return;}
-      const rows=(data||[]).filter(r=>(r.qty_current??0)>0);
-      const tb=$("#stockBody");tb.innerHTML='';
-      rows.forEach(r=>{
-        const hex=hexForDisplay(r.color);
-        const tr=document.createElement('tr');
-        tr.innerHTML=`<td><span class="swatch" style="background:${hex}"></span>${titleCase(r.color)}</td>
-                      <td>${r.type||'Grande table'}</td>
-                      <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
-        tb.appendChild(tr);
+      const { data, error } = await sb.from("v_stock").select("*").order("color");
+      if(error){ console.error(error); return; }
+      const tbody = document.getElementById("stockBody");
+      tbody.innerHTML = "";
+      data.forEach(r=>{
+        const hex = colorHexFromName(r.color);
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="color-label">
+            <span class="color-dot" style="background:${hex}"></span>
+            ${r.color}
+          </td>
+          <td>${r.type || ""}</td>
+          <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>
+        `;
+        tbody.appendChild(tr);
       });
-      setMsg('ok',rows.length?"Stock chargé.":"Aucune ligne enregistrée.");
     }
 
-    async function addExact(){
-      setMsg('muted',"⏳ Traitement…");
-      const colorId=Number($("#colorSelect").value);
-      const colorName=$("#colorSelect").selectedOptions[0]?.textContent||'';
-      const type=$("#typeSelect").value;
-      const target=Number($("#qtyInput").value);
-      if(!Number.isFinite(colorId)) return setMsg('err',"❌ Choisis une couleur.");
-      if(!type) return setMsg('err',"❌ Choisis un type.");
-      if(!Number.isFinite(target)||target<0) return setMsg('err',"❌ Quantité (≥ 0).");
-      const {data:cur,error:cerr}=await sb.from('legs_stock').select('qty').eq('color_id',colorId).eq('type',type).maybeSingle();
-      if(cerr){setMsg('err',"❌ Lecture stock actuel: "+cerr.message);return;}
-      const current=cur?.qty??0; const delta=target-current;
-      if(delta===0){setMsg('ok',`✅ « ${colorName} / ${type} » est déjà à ${target}.`);return;}
-      const {error:rerr}=await sb.rpc('apply_move',{p_color_id:colorId,p_delta:delta,p_note:`MAJ ${current}→${target}`,p_type:type});
-      if(rerr){setMsg('err',"❌ Écriture stock: "+rerr.message);return;}
-      setMsg('ok',`✅ « ${colorName} / ${type} » : ${current} → ${target}`);
-      $("#qtyInput").value=""; await loadStock();
+    async function buildColors(){
+      const { data, error } = await sb.from("colors").select("id,name").order("name");
+      if(error){ console.error(error); return; }
+      const select = document.getElementById("colorSelect");
+      select.innerHTML = "";
+      data.forEach(c=>{
+        const opt = document.createElement("option");
+        opt.value = c.id;
+        opt.textContent = c.name;
+        select.appendChild(opt);
+      });
     }
 
-    async function checkConnection(){
-      try{
-        if(!navigator.onLine){setStatus('warn','⚠️ Hors ligne (navigateur)');return;}
-        const {error}=await sb.from('colors').select('id').limit(1);
-        if(error){setStatus('bad','❌ Supabase indisponible');}
-        else{setStatus('ok','✅ Connecté');}
-      }catch{setStatus('bad','❌ Erreur de connexion');}
-    }
+    document.getElementById("stockForm").addEventListener("submit", async e=>{
+      e.preventDefault();
+      const colorId = document.getElementById("colorSelect").value;
+      const qty = parseInt(document.getElementById("qtyInput").value)||0;
+      const { error } = await sb.rpc("apply_move", { p_color_id: colorId, p_delta: qty, p_note: "ajout via site" });
+      if(error){ alert("❌ Écriture stock: " + error.message); }
+      else loadStock();
+    });
 
-    async function init(){
-      $("#addBtn").addEventListener('click',addExact);
-      $("#typeSelect").addEventListener('change',refreshRef);
-      refreshRef();
-
-      await loadColors();
-      await loadStock();
-      await checkConnection();
-
-      sb.channel('stock_changes')
-        .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
-        .subscribe();
-
-      setInterval(loadStock,30000);
-      window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(checkConnection);});
-      window.addEventListener('offline',()=>setStatus('warn','⚠️ Hors ligne'));
-    }
-    init();
+    buildColors();
+    loadStock();
+    setInterval(loadStock, 30000);
   </script>
 </body>
 </html>
