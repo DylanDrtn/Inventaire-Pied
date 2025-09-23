@@ -43,8 +43,16 @@
     .ref{font-size:12px; color:#666; margin-top:6px}
     .swatch {
       display:inline-block; width:14px; height:14px; border-radius:50%;
-      margin-right:6px; border:1px solid #ccc; vertical-align:middle; cursor:pointer;
+      margin-right:6px; border:1px solid #ccc; vertical-align:middle;
     }
+    /* picker visible et "tappable" sur mobile */
+    .picker {
+      width:22px; height:22px; padding:0; margin-left:8px; vertical-align:middle;
+      border:1px solid #ccc; border-radius:50%;
+      appearance: none; background: transparent; cursor: pointer;
+    }
+    .picker::-webkit-color-swatch-wrapper { padding:0; border-radius:50% }
+    .picker::-webkit-color-swatch { border: none; border-radius:50% }
   </style>
 </head>
 <body>
@@ -106,17 +114,17 @@
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script>
-    // --- anti-cache logos ---
+    // Anti-cache logos
     const versionParam = '?v=' + new Date().getTime();
     document.getElementById('fermobLogo').src = './fermob.png' + versionParam;
     document.getElementById('rodetLogo').src = './rodet.png' + versionParam;
 
-    // --- Supabase ---
+    // Supabase
     const SUPABASE_URL = "https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // --- helpers ---
+    // Helpers
     const TYPE_REFS = { "Petite table":"14x8 / 8x8", "Grande table":"165x10 / 207x10" };
     const $ = sel => document.querySelector(sel);
     const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
@@ -130,11 +138,11 @@
     }
     function refreshRef(){ const t=$("#typeSelect").value; $("#refBox").textContent = "Réf : " + (TYPE_REFS[t]||"-"); }
 
-    // --- couleurs depuis la base ---
+    // Couleurs depuis la base
     const HEX_BY_NAME = new Map();   // nom normalisé -> hex
     const ID_BY_NAME  = new Map();   // nom normalisé -> id
 
-    // couleur fallback si non renseignée
+    // Fallback si pas d'hex
     function hashColor(str){
       const s = (str||"").toLowerCase().trim();
       let h = 0; for(let i=0;i<s.length;i++){ h = ((h<<5)-h) + s.charCodeAt(i); h |= 0; }
@@ -144,7 +152,12 @@
     function colorHexFromName(name){
       const k = norm(name);
       const hex = HEX_BY_NAME.get(k);
-      return (hex && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) ? hex : hashColor(k);
+      return (hex && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(hex)) ? hex : '#888888'; // pour le picker
+    }
+    function swatchColor(name){
+      const k = norm(name);
+      const hex = HEX_BY_NAME.get(k);
+      return (hex && /^#/.test(hex)) ? hex : hashColor(k); // joli rendu même sans hex
     }
 
     async function loadColors(){
@@ -172,7 +185,7 @@
       }
     }
 
-    // --- tableau stock ---
+    // Tableau stock
     async function loadStock(){
       const { data, error } = await sb.from('v_stock').select('*');
       if(error){ setMsg('err',"Lecture stock: "+error.message); return; }
@@ -180,12 +193,14 @@
 
       const tbody = $("#stockBody"); tbody.innerHTML = '';
       rows.forEach(r=>{
-        const hex = colorHexFromName(r.color);
+        const displayHex = swatchColor(r.color);   // pour la pastille (supporte HSL fallback)
+        const pickerHex  = colorHexFromName(r.color); // pour le <input type=color> (doit être #xxxxxx)
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td>
-            <span class="swatch" data-color="${r.color}" title="Cliquer pour corriger" style="background:${hex}"></span>
+            <span class="swatch" style="background:${displayHex}"></span>
             ${titleCase(r.color)}
+            <input type="color" class="picker" value="${pickerHex}" data-color="${r.color}" title="Modifier la teinte">
           </td>
           <td>${r.type || 'Grande table'}</td>
           <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
@@ -194,7 +209,7 @@
       setMsg('ok', rows.length ? "Stock chargé." : "Aucune ligne enregistrée.");
     }
 
-    // --- correction d'une teinte (clic sur pastille) ---
+    // Sauvegarde de la teinte
     async function saveColorHexByName(name, newHex){
       const k = norm(name);
       const colorId = ID_BY_NAME.get(k);
@@ -208,24 +223,20 @@
       await loadStock();
     }
 
-    // déléguée sur le tableau
-    document.addEventListener('click', (e)=>{
-      const sw = e.target.closest('.swatch');
-      if(!sw) return;
-      const name = sw.getAttribute('data-color');
-      const current = colorHexFromName(name);
-      const input = document.createElement('input');
-      input.type = 'color';
-      // si couleur générée (hsl), mets un défaut
-      input.value = /^#/.test(current) ? current : '#888888';
-      input.style.position = 'fixed'; input.style.left = '-9999px';
-      document.body.appendChild(input);
-      input.addEventListener('input', ()=>{ sw.style.background = input.value; });
-      input.addEventListener('change', ()=>{ saveColorHexByName(name, input.value); document.body.removeChild(input); });
-      input.click();
+    // Délégation : changement d'un picker
+    document.addEventListener('change', (e)=>{
+      const picker = e.target.closest('.picker');
+      if(!picker) return;
+      const name = picker.getAttribute('data-color');
+      const val = picker.value; // #RRGGBB
+      if(/^#([0-9a-f]{6})$/i.test(val)){
+        saveColorHexByName(name, val);
+      }else{
+        setMsg('err', "Format de couleur invalide.");
+      }
     });
 
-    // --- actions ---
+    // Actions
     async function addExact(){
       setMsg('muted', "⏳ Traitement…");
       const colorId = Number($("#colorSelect").value);
@@ -247,7 +258,7 @@
       await loadStock();
     }
 
-    // --- état connexion ---
+    // État connexion
     async function checkConnection(){
       try{
         if(!navigator.onLine){ setStatus('warn','⚠️ Hors ligne (navigateur)'); return; }
@@ -257,22 +268,23 @@
       }catch{ setStatus('bad','❌ Erreur de connexion'); }
     }
 
-    // --- init ---
+    // Init
     async function init(){
       $("#addBtn").addEventListener('click', addExact);
       $("#typeSelect").addEventListener('change', refreshRef);
       refreshRef();
 
-      await loadColors();     // charge noms + hex + ids
+      // Assure la colonne hex (au cas où elle manque) -> à faire une fois en SQL côté Supabase :
+      // alter table public.colors add column if not exists hex text check (hex ~* '^#([0-9a-f]{3}|[0-9a-f]{6})$');
+
+      await loadColors();
       await loadStock();
       await checkConnection();
 
-      // temps réel
       sb.channel('stock_changes')
         .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
         .subscribe();
 
-      // secours
       setInterval(loadStock, 30000);
       window.addEventListener('online', () => { setStatus('warn','⏳ Reconnexion…'); loadStock().then(checkConnection); });
       window.addEventListener('offline', () => setStatus('warn','⚠️ Hors ligne'));
