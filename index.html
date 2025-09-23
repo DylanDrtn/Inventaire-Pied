@@ -109,38 +109,10 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    // === Mapping couleurs manuelles ===
+    // Correction ciblée
     const COLOR_HEX = {
       "pain d'épices": "#986F31",
-      "pain d’epices": "#986F31", // apostrophe typographique
-      "orange confite": "#9C4B1C",
-      "orange confit": "#9C4B1C",
-      "gris argile": "#D1CCBE",
-      "gris lapilli": "#8C9491",
-      "gris lapili": "#8C9491",
-      "gris orage": "#657271",
-      "anthracite": "#3F4241",
-      "carbone": "#3F4241",
-      "bleu abysse": "#0C1B31",
-      "bleu abysses": "#0C1B31",
-      "bleu acapulco": "#174955",
-      "bleu maya": "#88B6D1",
-      "miel": "#E8AF03",
-      "citron givré": "#FFF7AD",
-      "romarin": "#61635B",
-      "cactus": "#778565",
-      "blanc coton": "#FFFEF6",
-      "réglisse": "#2B2B2C",
-      "tonka": "#4B443D",
-      "cerise noire": "#541827",
-      "piment": "#932426",
-      "ocre rouge": "#7F3D31",
-      "muscade": "#B4A28F",
-      "guimauve": "#CECAE6",
-      "menthe glaciale": "#E3F1E8",
-      "vert tilleul": "#A4A57E",
-      "pesto": "#5E5E31",
-      "vert cèdre": "#2A5644"
+      "pain d’epices": "#986F31" // apostrophe typographique
     };
 
     function norm(str){ return (str||"").toLowerCase().trim(); }
