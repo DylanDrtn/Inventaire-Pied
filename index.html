@@ -101,8 +101,10 @@
     </div>
   </div>
 
-  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
-  <script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm";
+    import { COLOR_HEX } from "./colors.js"; // ✅ import externe
+
     // Anti-cache logos
     const versionParam='?v='+new Date().getTime();
     document.getElementById('fermobLogo').src='./fermob.png'+versionParam;
@@ -111,7 +113,7 @@
     // Supabase
     const SUPABASE_URL="https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
-    const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+    const sb=createClient(SUPABASE_URL,SUPABASE_KEY);
 
     // Helpers
     const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
@@ -128,54 +130,16 @@
       const hue=Math.abs(h)%360;return `hsl(${hue} 55% 45%)`;
     }
 
-    // Dictionnaire interne (complété/corrigé)
-const COLOR_HEX = {
-  "blanc coton":"#F1F2F3",
-  "gris orage":"#6D6E71",
-  "gris argile":"#9C9B95",
-  "gris lapili":"#BEBDB8",
-  "gris lapilli":"#BEBDB8",        // alias
-
-  "carbone":"#2B2B2B",
-  "anthracite":"#474747",
-  "réglisse":"#2B2B2C",
-
-  "bleu abysse":"#0E3A5B",
-  "bleu abysses":"#0E3A5B",        // alias
-  "bleu acapulco":"#2F6F9E",
-  "bleu maya":"#2B4DA3",
-
-  "cactus":"#5A7D3A",
-  "romarin":"#8AA38B",
-  "rouille":"#A34E2E",
-  "piment":"#B72227",
-  "capucine":"#E85C41",
-  "cerise noire":"#61112A",
-  "beige latte":"#D7C9B8",
-  "verveine":"#C7E15E",
-  "olive":"#6D7C3A",
-  "muscat":"#A4B500",
-  "miel":"#C08A2C",
-  "noisette":"#8E6B3D",
-
-  "opaline":"#BBD6D6",
-  "guimauve":"#E6C4D3",
-  "rose praline":"#E37A8E",
-
-  // ✅ Corrections clés :
-  "orange confite":"#9C4B1C",      // était trop orange (#E8832E)
-  "orange confit":"#9C4B1C",       // alias
-
-  "citron givré":"#E6E879",
-
-  // ✅ Pain d’épices (toutes variantes d’apostrophe)
-  "pain d'épices":"#986F31",
-  "pain d’epices":"#986F31",
-  "pain d''epices":"#986F31"
-};
+    function hexForDisplay(name){
+      const k=norm(name);
+      const fromDb=HEX_BY_NAME.get(k);
+      if(fromDb && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(fromDb)) return fromDb;
+      const fromLocal=COLOR_HEX[k]; if(fromLocal) return fromLocal;
+      return hashColor(k); // dernier recours
+    }
 
     // Cache des couleurs lues depuis la base
-    const HEX_BY_NAME=new Map(); // nom normalisé -> hex (depuis Supabase)
+    const HEX_BY_NAME=new Map();
     async function loadColors(){
       const {data,error}=await sb.from('colors').select('id,name,hex').eq('active',true).order('name');
       if(error){setMsg('err',"Lecture couleurs: "+error.message);return;}
@@ -189,14 +153,6 @@ const COLOR_HEX = {
           const opt=document.createElement('option');opt.value=String(r.id);opt.textContent=titleCase(r.name);sel.appendChild(opt);
         }
       }
-    }
-
-    function hexForDisplay(name){
-      const k=norm(name);
-      const fromDb=HEX_BY_NAME.get(k);
-      if(fromDb && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(fromDb)) return fromDb;
-      const fromLocal=COLOR_HEX[k]; if(fromLocal) return fromLocal;
-      return hashColor(k); // dernier recours
     }
 
     async function loadStock(){
