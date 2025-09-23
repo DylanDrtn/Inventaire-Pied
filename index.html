@@ -19,7 +19,7 @@
     .h-left,.h-right{width:160px; display:flex; align-items:center; justify-content:center}
     .h-center{flex:1; text-align:center}
     header h1{margin:0; font-size:22px; letter-spacing:.2px}
-    .logo{height:48px; object-fit:contain; max-width:150px; filter:brightness(0) invert(1)}
+    .logo{height:48px; object-fit:contain; max-width:150px} /* pas de filtre, on affiche tel quel */
     .wrap{max-width:980px; margin:0 auto; padding:16px}
     .status{
       display:inline-flex; align-items:center; gap:8px;
@@ -46,7 +46,10 @@
 <body>
   <header>
     <div class="h-left">
-      <img class="logo" alt="Fermob" src="https://upload.wikimedia.org/wikipedia/commons/7/7f/Fermob_logo.png" />
+      <!-- 🟢 Logo Fermob local (met le fichier fermob.png à la racine du dépôt) -->
+      <img class="logo" alt="Fermob" src="./fermob.png"
+           onerror="this.style.display='none';document.getElementById('fermobTxt').style.display='inline'">
+      <span id="fermobTxt" style="display:none;font-weight:700">Fermob</span>
     </div>
     <div class="h-center">
       <h1>Inventaire Pied de Table</h1>
@@ -55,8 +58,10 @@
       </div>
     </div>
     <div class="h-right">
-      <!-- Logo Rodet depuis Google Drive -->
-      <img class="logo" alt="Rodet" src="https://drive.google.com/uc?export=view&id=1zdh1QFhDZpByvXnuz157UFf4uWqrhi-i" />
+      <!-- 🟢 Logo Rodet local (met le fichier rodet.png à la racine du dépôt) -->
+      <img class="logo" alt="Rodet" src="./rodet.png"
+           onerror="this.style.display='none';document.getElementById('rodetTxt').style.display='inline'">
+      <span id="rodetTxt" style="display:none;font-weight:700">Rodet</span>
     </div>
   </header>
 
@@ -105,8 +110,8 @@
     const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    const TYPE_REFS = { "Petite table":"14x8 / 8x8", "Grande table":"165x10 / 207x10" };
     const $ = sel => document.querySelector(sel);
+    const TYPE_REFS = { "Petite table":"14x8 / 8x8", "Grande table":"165x10 / 207x10" };
     const norm = s => (s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase = s => (s||"").toLowerCase().replace(/\S+/g, w => w.charAt(0).toUpperCase()+w.slice(1));
 
