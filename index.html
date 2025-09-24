@@ -126,7 +126,7 @@
 
   <div class="wrap">
     <div class="card">
-      <div class="row">
+      <div class="row" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
         <div style="flex:1 1 260px">
           <label>Couleur</label><br />
           <select id="colorSelect"></select>
@@ -138,7 +138,7 @@
             <option value="Petite table">Petite table</option>
             <option value="Grande table">Grande table</option>
           </select>
-          <div id="refBox" class="ref"></div>
+          <div id="refBox" class="ref" style="font-size:12px;color:#666;margin-top:6px"></div>
         </div>
 
         <div>
@@ -150,8 +150,8 @@
           <button id="addBtn"><b>Ajouter</b></button>
         </div>
       </div>
-      <div id="msg" class="msg"></div>
-      <p class="msg muted" style="margin:6px 0 0">“Ajouter” met le stock <b>exact</b> (le site calcule la différence automatiquement).</p>
+      <div id="msg" class="msg" style="min-height:1.4em;margin-top:8px"></div>
+      <p class="msg muted" style="margin:6px 0 0;color:#666">“Ajouter” met le stock <b>exact</b> (le site calcule la différence automatiquement).</p>
     </div>
 
     <div class="card">
@@ -175,19 +175,33 @@
     </div>
   </div>
 
+  <!-- Lib Supabase en global -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+
+  <!-- Script principal en module -->
   <script type="module">
-    import { COLOR_HEX } from "./colors.js";
+    // ====== Import robuste de colors.js (avec fallback) ======
+    let COLOR_HEX = {};
+    try {
+      // cache-busting pour éviter un ancien fichier
+      const mod = await import('./colors.js?v=' + Date.now());
+      COLOR_HEX = mod?.COLOR_HEX || {};
+    } catch (e) {
+      console.warn('colors.js introuvable, on continue sans (fallback internes).', e);
+      COLOR_HEX = {};
+    }
 
     // Anti-cache logos
     const versionParam='?v='+new Date().getTime();
     document.getElementById('fermobLogo').src='./fermob.png'+versionParam;
     document.getElementById('rodetLogo').src='./rodet.png'+versionParam;
 
+    // Supabase
     const SUPABASE_URL="https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
+    // Helpers
     const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
     const $=sel=>document.querySelector(sel);
     const norm=s=>(s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
@@ -304,25 +318,50 @@
 
     async function checkConnection(){
       try{
-        if(!navigator.onLine){setStatus('warn','⚠️ Hors ligne');return;}
+        if(!navigator.onLine){setStatus('warn','⚠️ Hors ligne (navigateur)');return;}
         const {error}=await sb.from('colors').select('id').limit(1);
         if(error){setStatus('bad','❌ Supabase indisponible');}
         else{setStatus('ok','✅ Connecté');}
-      }catch{setStatus('bad','❌ Erreur de connexion');}
+      }catch{
+        setStatus('bad','❌ Erreur de connexion');
+      }
     }
 
     async function init(){
-      $("#addBtn").addEventListener('click',addExact);
-      $("#typeSelect").addEventListener('change',refreshRef);
-      $("#filterInput").addEventListener('input',applyFilterSort);
-      $("#sortName").addEventListener('click',()=>{
+      // écouteurs UI
+      document.getElementById("addBtn").addEventListener('click',addExact);
+      document.getElementById("typeSelect").addEventListener('change',refreshRef);
+      document.getElementById("filterInput").addEventListener('input',applyFilterSort);
+      document.getElementById("sortName").addEventListener('click',()=>{
         SORT_NAME_ASC=!SORT_NAME_ASC;
-        setActiveChip($("#sortName"));
-        $("#sortName").textContent=SORT_NAME_ASC?"Nom A→Z":"Nom Z→A";
+        setActiveChip(document.getElementById("sortName"));
+        document.getElementById("sortName").textContent=SORT_NAME_ASC?"Nom A→Z":"Nom Z→A";
         applyFilterSort();
       });
-      $("#sortQty").addEventListener('click',()=>{
+      document.getElementById("sortQty").addEventListener('click',()=>{
         SORT_QTY_DESC=!SORT_QTY_DESC;
-        setActiveChip($("#sortQty"));
-        $("#sortQty").textContent=SORT_QTY_DESC?"Stock ⬇︎":"Stock ⬆︎";
+        setActiveChip(document.getElementById("sortQty"));
+        document.getElementById("sortQty").textContent=SORT_QTY_DESC?"Stock ⬇︎":"Stock ⬆︎";
         applyFilterSort();
+      });
+      setActiveChip(document.getElementById("sortQty")); // tri par stock au départ
+      refreshRef();
+
+      // chargements
+      await loadColors().catch(()=>{ /* on continue */ });
+      await loadStock().catch(()=>{ /* on continue */ });
+      await checkConnection();
+
+      // live updates
+      sb.channel('stock_changes')
+        .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
+        .subscribe();
+
+      setInterval(loadStock,30000);
+      window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(checkConnection);});
+      window.addEventListener('offline',()=>setStatus('warn','⚠️ Hors ligne'));
+    }
+    init();
+  </script>
+</body>
+</html>
