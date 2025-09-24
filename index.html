@@ -202,7 +202,7 @@
     const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
     // Helpers
-    const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
+    const TYPE_REFS={"Petite table":"143x80 / 80x80","Grande table":"165x10 / 207x10"};
     const $=sel=>document.querySelector(sel);
     const norm=s=>(s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase=s=>(s||"").toLowerCase().replace(/\S+/g,w=>w.charAt(0).toUpperCase()+w.slice(1));
