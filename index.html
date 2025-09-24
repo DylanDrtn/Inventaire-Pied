@@ -43,9 +43,6 @@
     }
     button:hover{background:var(--brand-600); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(76,114,51,.18);}
     button:active{transform: translateY(0); box-shadow:none;}
-    .btn-small{
-      padding:6px 10px; font-size:14px; line-height:1;
-    }
 
     /* Tableau amélioré */
     table{
@@ -78,12 +75,34 @@
       margin:2px 0;
     }
 
+    /* Barre outils du tableau */
+    .tools{
+      display:flex; gap:8px; align-items:center; justify-content:space-between;
+      margin:6px 0 10px;
+    }
+    .tools .left, .tools .right{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+    .chip{
+      background:#e5e9e5; color:#222; font-weight:600;
+      border:1px solid var(--brand-600); border-radius:999px; padding:6px 12px; cursor:pointer;
+    }
+    .chip.active{ background:var(--brand); color:#fff; }
+
+    /* Totaux */
+    .totals{
+      margin-top:10px; font-weight:600; color:#355a22;
+      display:flex; gap:12px; flex-wrap:wrap;
+    }
+    .totals .pill{
+      background:#eef5e9; border:1px solid #dbe8d8; border-radius:999px; padding:6px 10px;
+    }
+
     /* Mobile */
     @media (max-width:640px){
       header h1{ font-size:18px; }
       .wrap{ padding:12px; }
       th, td{ padding:8px; font-size:14px; }
       .card{ padding:12px; }
+      .tools{ flex-direction:column; align-items:stretch; }
     }
   </style>
 </head>
@@ -124,11 +143,7 @@
 
         <div>
           <label>Quantité de pieds</label><br />
-          <div style="display:flex; gap:6px; align-items:center">
-            <button type="button" id="minusBtn" class="btn-small">−1</button>
-            <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:100px" />
-            <button type="button" id="plusBtn" class="btn-small">+1</button>
-          </div>
+          <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px" />
         </div>
 
         <div>
@@ -140,22 +155,39 @@
     </div>
 
     <div class="card">
-      <h3 style="margin:0 0 10px">Stock par couleur et type</h3>
+      <div class="tools">
+        <div class="left">
+          <h3 style="margin:0">Stock par couleur et type</h3>
+        </div>
+        <div class="right">
+          <input id="filterInput" type="text" placeholder="Rechercher une couleur…" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;width:200px">
+          <button id="sortName" class="chip" title="Trier par nom">Nom A→Z</button>
+          <button id="sortQty" class="chip" title="Trier par stock">Stock ⬇︎</button>
+        </div>
+      </div>
+
       <table>
         <thead><tr><th>Couleur</th><th>Type</th><th>Stock</th></tr></thead>
         <tbody id="stockBody"></tbody>
       </table>
+
+      <div id="totals" class="totals" aria-live="polite"></div>
     </div>
   </div>
 
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
   <script type="module">
     import { COLOR_HEX } from "./colors.js";
+
+    // Anti-cache logos
+    const versionParam='?v='+new Date().getTime();
+    document.getElementById('fermobLogo').src='./fermob.png'+versionParam;
+    document.getElementById('rodetLogo').src='./rodet.png'+versionParam;
+
     const SUPABASE_URL="https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-    // Helpers
     const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
     const $=sel=>document.querySelector(sel);
     const norm=s=>(s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
@@ -193,11 +225,31 @@
       return hashColor(k);
     }
 
-    async function loadStock(){
-      const {data,error}=await sb.from('v_stock').select('*');
-      if(error){setMsg('err',"Lecture stock: "+error.message);return;}
-      const rows=(data||[]).filter(r=>(r.qty_current??0)>0);
-      const tb=$("#stockBody");tb.innerHTML='';
+    let FULL_ROWS=[]; let VIEW_ROWS=[];
+    let SORT_NAME_ASC=true; let SORT_QTY_DESC=true;
+
+    function applyFilterSort(){
+      const q=norm($("#filterInput").value);
+      VIEW_ROWS = FULL_ROWS.filter(r => !q || norm(r.color).includes(q));
+      if($("#sortQty").classList.contains('active')){
+        VIEW_ROWS.sort((a,b)=> (b.qty_current??0) - (a.qty_current??0));
+        if(!SORT_QTY_DESC) VIEW_ROWS.reverse();
+      }else{
+        VIEW_ROWS.sort((a,b)=> norm(a.color).localeCompare(norm(b.color)));
+        if(!SORT_NAME_ASC) VIEW_ROWS.reverse();
+      }
+      renderTable(VIEW_ROWS);
+      renderTotals(VIEW_ROWS);
+    }
+
+    function setActiveChip(btn){
+      $("#sortName").classList.remove('active');
+      $("#sortQty").classList.remove('active');
+      btn.classList.add('active');
+    }
+
+    function renderTable(rows){
+      const tb=$("#stockBody"); tb.innerHTML='';
       rows.forEach(r=>{
         const hex=hexForDisplay(r.color);
         const tr=document.createElement('tr');
@@ -207,6 +259,28 @@
         tb.appendChild(tr);
       });
       setMsg('ok',rows.length?"Stock chargé.":"Aucune ligne enregistrée.");
+    }
+
+    function renderTotals(rows){
+      let petite=0, grande=0, total=0;
+      for(const r of rows){
+        const q=r.qty_current??0;
+        total+=q;
+        if((r.type||'Grande table')==='Petite table') petite+=q; else grande+=q;
+      }
+      $("#totals").innerHTML=`
+        <div class="pill">Petite table : ${petite}</div>
+        <div class="pill">Grande table : ${grande}</div>
+        <div class="pill">Total : ${total}</div>
+      `;
+    }
+
+    async function loadStock(){
+      const {data,error}=await sb.from('v_stock').select('*');
+      if(error){setMsg('err',"Lecture stock: "+error.message);return;}
+      const rows=(data||[]).filter(r=>(r.qty_current??0)>0);
+      FULL_ROWS=rows.slice();
+      applyFilterSort();
     }
 
     async function addExact(){
@@ -230,7 +304,7 @@
 
     async function checkConnection(){
       try{
-        if(!navigator.onLine){setStatus('warn','⚠️ Hors ligne (navigateur)');return;}
+        if(!navigator.onLine){setStatus('warn','⚠️ Hors ligne');return;}
         const {error}=await sb.from('colors').select('id').limit(1);
         if(error){setStatus('bad','❌ Supabase indisponible');}
         else{setStatus('ok','✅ Connecté');}
@@ -240,27 +314,15 @@
     async function init(){
       $("#addBtn").addEventListener('click',addExact);
       $("#typeSelect").addEventListener('change',refreshRef);
-      $("#minusBtn").addEventListener('click',()=>{ 
-        const inp=$("#qtyInput"); inp.value= Math.max(0,(+inp.value||0)-1); 
+      $("#filterInput").addEventListener('input',applyFilterSort);
+      $("#sortName").addEventListener('click',()=>{
+        SORT_NAME_ASC=!SORT_NAME_ASC;
+        setActiveChip($("#sortName"));
+        $("#sortName").textContent=SORT_NAME_ASC?"Nom A→Z":"Nom Z→A";
+        applyFilterSort();
       });
-      $("#plusBtn").addEventListener('click',()=>{ 
-        const inp=$("#qtyInput"); inp.value= (+inp.value||0)+1; 
-      });
-      refreshRef();
-
-      await loadColors();
-      await loadStock();
-      await checkConnection();
-
-      sb.channel('stock_changes')
-        .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
-        .subscribe();
-
-      setInterval(loadStock,30000);
-      window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(checkConnection);});
-      window.addEventListener('offline',()=>setStatus('warn','⚠️ Hors ligne'));
-    }
-    init();
-  </script>
-</body>
-</html>
+      $("#sortQty").addEventListener('click',()=>{
+        SORT_QTY_DESC=!SORT_QTY_DESC;
+        setActiveChip($("#sortQty"));
+        $("#sortQty").textContent=SORT_QTY_DESC?"Stock ⬇︎":"Stock ⬆︎";
+        applyFilterSort();
