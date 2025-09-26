@@ -20,8 +20,14 @@
     .h-center{flex:1; text-align:center}
     header h1{margin:0; font-size:22px; letter-spacing:.2px}
     .logo{height:48px; object-fit:contain; max-width:150px}
-    .wrap{max-width:980px; margin:0 auto; padding:16px}
 
+    /* ✅ Fermob uniquement plus grand */
+    #fermobLogo {
+      height:72px;
+      max-width:220px;
+    }
+
+    .wrap{max-width:980px; margin:0 auto; padding:16px}
     .status{
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 12px; border-radius:999px; font-size:14px; border:1px solid var(--line);
@@ -202,7 +208,7 @@
     const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
     // Helpers
-    const TYPE_REFS={"Petite table":"143x80 / 80x80","Grande table":"165x10 / 207x10"};
+    const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
     const $=sel=>document.querySelector(sel);
     const norm=s=>(s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase=s=>(s||"").toLowerCase().replace(/\S+/g,w=>w.charAt(0).toUpperCase()+w.slice(1));
