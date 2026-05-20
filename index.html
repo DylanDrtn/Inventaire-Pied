@@ -15,13 +15,14 @@
       display:flex; align-items:center; gap:12px;
       padding:12px 16px; border-bottom:1px solid var(--line);
       background:linear-gradient(0deg,var(--brand-600),var(--brand)); color:#fff;
+      position:relative;
     }
     .h-left,.h-right{width:160px; display:flex; align-items:center; justify-content:center}
     .h-center{flex:1; text-align:center}
     header h1{margin:0; font-size:22px; letter-spacing:.2px}
     .logo{height:48px; object-fit:contain; max-width:150px}
 
-    /* ✅ Fermob uniquement plus grand */
+    /* Fermob uniquement plus grand */
     #fermobLogo {
       height:72px;
       max-width:220px;
@@ -37,6 +38,40 @@
     .dot{width:10px;height:10px;border-radius:50%;}
     .ok{background:#16a34a}.warn{background:#f59e0b}.bad{background:#ef4444}
 
+    /* Bouton connexion discret en haut à droite */
+    .login-btn{
+      position:absolute; top:10px; right:12px;
+      background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.3);
+      padding:6px 12px; border-radius:999px; font-size:13px; cursor:pointer;
+      display:flex; align-items:center; gap:6px;
+      transition: background .2s ease;
+    }
+    .login-btn:hover{ background:rgba(255,255,255,.25); }
+    .login-btn.connected{ background:rgba(22,163,74,.85); border-color:rgba(22,163,74,1); }
+
+    /* Modal PIN */
+    .modal-bg{
+      position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
+      align-items:center; justify-content:center; z-index:100;
+    }
+    .modal-bg.show{ display:flex; }
+    .modal{
+      background:#fff; padding:24px; border-radius:14px; max-width:320px; width:90%;
+      box-shadow:0 10px 30px rgba(0,0,0,.3);
+    }
+    .modal h2{ margin:0 0 12px; font-size:18px; color:#355a22; }
+    .modal p{ margin:0 0 16px; color:#666; font-size:14px; }
+    .modal input{
+      width:100%; padding:12px; font-size:18px; text-align:center; letter-spacing:8px;
+      border:1px solid var(--line); border-radius:10px; margin-bottom:12px;
+    }
+    .modal .actions{ display:flex; gap:8px; justify-content:flex-end; }
+    .modal .btn-cancel{
+      background:#eee; color:#333; border:1px solid var(--line);
+      padding:8px 14px; border-radius:10px; cursor:pointer;
+    }
+    .modal .err{ color:var(--danger); font-size:13px; margin-bottom:8px; min-height:1.2em; }
+
     .card{
       background:#fff;border:1px solid var(--line);border-radius:14px; padding:16px; margin-top:16px;
       box-shadow: 0 6px 18px rgba(0,0,0,.06);
@@ -47,10 +82,16 @@
       padding:10px 14px;border:1px solid var(--brand-600);border-radius:10px;background:var(--brand);color:#fff;cursor:pointer;
       transition: transform .06s ease, background .2s ease, box-shadow .2s ease;
     }
-    button:hover{background:var(--brand-600); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(76,114,51,.18);}
-    button:active{transform: translateY(0); box-shadow:none;}
+    button:hover:not(:disabled){background:var(--brand-600); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(76,114,51,.18);}
+    button:active:not(:disabled){transform: translateY(0); box-shadow:none;}
 
-    /* Tableau amélioré */
+    /* État désactivé pour les boutons quand pas connecté */
+    button:disabled, input:disabled, select:disabled{
+      opacity:0.5; cursor:not-allowed; background:#ccc; border-color:#bbb;
+    }
+    button:disabled:hover{ transform:none; box-shadow:none; }
+
+    /* Tableau */
     table{
       width:100%;border-collapse:separate;border-spacing:0;background:#fff;
       border:1px solid var(--line); border-radius:12px; overflow:hidden;
@@ -109,6 +150,7 @@
       th, td{ padding:8px; font-size:14px; }
       .card{ padding:12px; }
       .tools{ flex-direction:column; align-items:stretch; }
+      .login-btn{ font-size:11px; padding:4px 8px; top:6px; right:6px; }
     }
   </style>
 </head>
@@ -128,7 +170,22 @@
       <img id="rodetLogo" class="logo" alt="Rodet" src="./rodet.png">
       <span id="rodetTxt" style="display:none;font-weight:700">Rodet</span>
     </div>
+    <button id="loginBtn" class="login-btn" title="Se connecter pour modifier">🔒 Connexion</button>
   </header>
+
+  <!-- Modal de connexion PIN -->
+  <div id="modalBg" class="modal-bg">
+    <div class="modal">
+      <h2>🔒 Connexion</h2>
+      <p>Entre le code PIN pour pouvoir modifier le stock.</p>
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="••••" autocomplete="off">
+      <div id="pinErr" class="err"></div>
+      <div class="actions">
+        <button class="btn-cancel" id="pinCancel">Annuler</button>
+        <button id="pinSubmit">Valider</button>
+      </div>
+    </div>
+  </div>
 
   <div class="wrap">
     <div class="card">
@@ -149,7 +206,7 @@
 
         <div>
           <label>Quantité de pieds</label><br />
-          <input id="qtyInput" type="number" min="0" placeholder="ex : 12" style="width:140px" />
+          <input id="qtyInput" type="number" min="0" inputmode="numeric" placeholder="ex : 12" style="width:140px" />
         </div>
 
         <div>
@@ -157,7 +214,7 @@
         </div>
       </div>
       <div id="msg" class="msg" style="min-height:1.4em;margin-top:8px"></div>
-      <p class="msg muted" style="margin:6px 0 0;color:#666">“Ajouter” met le stock <b>exact</b> (le site calcule la différence automatiquement).</p>
+      <p class="msg muted" style="margin:6px 0 0;color:#666">"Ajouter" met le stock <b>exact</b> (le site calcule la différence automatiquement).</p>
     </div>
 
     <div class="card">
@@ -186,10 +243,13 @@
 
   <!-- Script principal en module -->
   <script type="module">
+    // ====== CONFIG PIN ======
+    const APP_PIN = "2669"; // Code PIN pour modifier le stock
+    const SESSION_KEY = "fermob_session_v1";
+
     // ====== Import robuste de colors.js (avec fallback) ======
     let COLOR_HEX = {};
     try {
-      // cache-busting pour éviter un ancien fichier
       const mod = await import('./colors.js?v=' + Date.now());
       COLOR_HEX = mod?.COLOR_HEX || {};
     } catch (e) {
@@ -215,6 +275,94 @@
     function setMsg(kind,txt){const m=$("#msg");m.className="msg "+kind;m.textContent=txt;}
     function setStatus(kind,text){const d=$("#statusDot"),t=$("#statusText");d.className="dot "+(kind==="ok"?"ok":kind==="bad"?"bad":"warn");t.textContent=text;}
     function refreshRef(){const t=$("#typeSelect").value;$("#refBox").textContent="Réf : "+(TYPE_REFS[t]||"-");}
+
+    // ====== GESTION SESSION PIN ======
+    // Une session est valide pendant la semaine en cours (lundi 00:00 → vendredi 23:59)
+    function isWeekendOrExpired(){
+      const now=new Date();
+      const day=now.getDay(); // 0=dimanche, 6=samedi
+      return (day===0 || day===6);
+    }
+
+    function isLoggedIn(){
+      const raw=localStorage.getItem(SESSION_KEY);
+      if(!raw) return false;
+      try{
+        const s=JSON.parse(raw);
+        if(!s.loggedAt) return false;
+        // Vérifier qu'on est dans la même semaine que la connexion
+        const now=new Date();
+        const logged=new Date(s.loggedAt);
+        // Si on est weekend → déconnexion
+        if(isWeekendOrExpired()) { localStorage.removeItem(SESSION_KEY); return false; }
+        // Si on a changé de semaine (lundi suivant) → déconnexion
+        const weekStart=getMondayOfWeek(now);
+        if(logged < weekStart) { localStorage.removeItem(SESSION_KEY); return false; }
+        return true;
+      }catch{ return false; }
+    }
+
+    function getMondayOfWeek(date){
+      const d=new Date(date);
+      const day=d.getDay();
+      const diff=d.getDate() - day + (day===0 ? -6 : 1); // ajuste pour avoir lundi
+      d.setDate(diff);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    function login(){
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ loggedAt: new Date().toISOString() }));
+      updateLoginUI();
+    }
+
+    function logout(){
+      localStorage.removeItem(SESSION_KEY);
+      updateLoginUI();
+    }
+
+    function updateLoginUI(){
+      const logged=isLoggedIn();
+      const btn=$("#loginBtn");
+      if(logged){
+        btn.textContent="🔓 Connecté";
+        btn.classList.add('connected');
+        btn.title="Cliquer pour se déconnecter";
+      }else{
+        btn.textContent="🔒 Connexion";
+        btn.classList.remove('connected');
+        btn.title="Se connecter pour modifier";
+      }
+      // Activer/désactiver les contrôles d'édition
+      $("#addBtn").disabled=!logged;
+      $("#qtyInput").disabled=!logged;
+      $("#colorSelect").disabled=!logged;
+      $("#typeSelect").disabled=!logged;
+    }
+
+    function openLoginModal(){
+      $("#pinInput").value="";
+      $("#pinErr").textContent="";
+      $("#modalBg").classList.add('show');
+      setTimeout(()=>$("#pinInput").focus(),100);
+    }
+
+    function closeLoginModal(){
+      $("#modalBg").classList.remove('show');
+    }
+
+    function trySubmitPin(){
+      const v=$("#pinInput").value.trim();
+      if(v===APP_PIN){
+        login();
+        closeLoginModal();
+        setMsg('ok','✅ Connecté. Tu peux modifier le stock.');
+      }else{
+        $("#pinErr").textContent="❌ Code PIN incorrect.";
+        $("#pinInput").value="";
+        $("#pinInput").focus();
+      }
+    }
 
     function hashColor(str){
       const s=(str||"").toLowerCase().trim();let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}
@@ -304,6 +452,13 @@
     }
 
     async function addExact(){
+      // Vérification connexion
+      if(!isLoggedIn()){
+        setMsg('err',"🔒 Connecte-toi pour modifier le stock.");
+        openLoginModal();
+        return;
+      }
+
       setMsg('muted',"⏳ Traitement…");
       const colorId=Number($("#colorSelect").value);
       const colorName=$("#colorSelect").selectedOptions[0]?.textContent||'';
@@ -312,12 +467,35 @@
       if(!Number.isFinite(colorId)) return setMsg('err',"❌ Choisis une couleur.");
       if(!type) return setMsg('err',"❌ Choisis un type.");
       if(!Number.isFinite(target)||target<0) return setMsg('err',"❌ Quantité (≥ 0).");
+
       const {data:cur,error:cerr}=await sb.from('legs_stock').select('qty').eq('color_id',colorId).eq('type',type).maybeSingle();
       if(cerr){setMsg('err',"❌ Lecture stock actuel: "+cerr.message);return;}
       const current=cur?.qty??0; const delta=target-current;
       if(delta===0){setMsg('ok',`✅ « ${colorName} / ${type} » est déjà à ${target}.`);return;}
+
+      // Confirmation pour gros écarts (sécurité anti-erreur de frappe)
+      if(Math.abs(delta) >= 20){
+        const ok = confirm(`⚠️ Attention, gros changement !\n\n${colorName} / ${type}\nStock actuel : ${current}\nNouveau stock : ${target}\nÉcart : ${delta > 0 ? '+' : ''}${delta}\n\nConfirmer ?`);
+        if(!ok){ setMsg('warn','Modification annulée.'); return; }
+      }
+
       const {error:rerr}=await sb.rpc('apply_move',{p_color_id:colorId,p_delta:delta,p_note:`MAJ ${current}→${target}`,p_type:type});
       if(rerr){setMsg('err',"❌ Écriture stock: "+rerr.message);return;}
+
+      // Enregistrement dans l'historique
+      try {
+        await sb.from('legs_history').insert({
+          color_id: colorId,
+          color_name: colorName,
+          type: type,
+          qty_before: current,
+          qty_after: target,
+          delta: delta
+        });
+      } catch(e){
+        console.warn('Erreur enregistrement historique:', e);
+      }
+
       setMsg('ok',`✅ « ${colorName} / ${type} » : ${current} → ${target}`);
       $("#qtyInput").value=""; await loadStock();
     }
@@ -336,38 +514,4 @@
     async function init(){
       // écouteurs UI
       document.getElementById("addBtn").addEventListener('click',addExact);
-      document.getElementById("typeSelect").addEventListener('change',refreshRef);
-      document.getElementById("filterInput").addEventListener('input',applyFilterSort);
-      document.getElementById("sortName").addEventListener('click',()=>{
-        SORT_NAME_ASC=!SORT_NAME_ASC;
-        setActiveChip(document.getElementById("sortName"));
-        document.getElementById("sortName").textContent=SORT_NAME_ASC?"Nom A→Z":"Nom Z→A";
-        applyFilterSort();
-      });
-      document.getElementById("sortQty").addEventListener('click',()=>{
-        SORT_QTY_DESC=!SORT_QTY_DESC;
-        setActiveChip(document.getElementById("sortQty"));
-        document.getElementById("sortQty").textContent=SORT_QTY_DESC?"Stock ⬇︎":"Stock ⬆︎";
-        applyFilterSort();
-      });
-      setActiveChip(document.getElementById("sortName")); // tri par stock au départ
-      refreshRef();
-
-      // chargements
-      await loadColors().catch(()=>{ /* on continue */ });
-      await loadStock().catch(()=>{ /* on continue */ });
-      await checkConnection();
-
-      // live updates
-      sb.channel('stock_changes')
-        .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
-        .subscribe();
-
-      setInterval(loadStock,30000);
-      window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(checkConnection);});
-      window.addEventListener('offline',()=>setStatus('warn','⚠️ Hors ligne'));
-    }
-    init();
-  </script>
-</body>
-</html>
+      document.getE
