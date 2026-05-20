@@ -72,6 +72,24 @@
     }
     .modal .err{ color:var(--danger); font-size:13px; margin-bottom:8px; min-height:1.2em; }
 
+    /* Toast inventaire discret en bas à droite */
+    .inv-toast{
+      position:fixed; bottom:20px; right:20px; z-index:90;
+      background:#fff; border:1px solid var(--line); border-left:4px solid var(--brand);
+      padding:14px 16px; border-radius:10px; box-shadow:0 6px 20px rgba(0,0,0,.15);
+      max-width:320px; display:none; animation: slideIn .3s ease;
+    }
+    .inv-toast.show{ display:block; }
+    @keyframes slideIn { from{opacity:0; transform:translateY(20px);} to{opacity:1; transform:translateY(0);} }
+    .inv-toast .inv-title{ font-weight:700; color:#355a22; margin-bottom:6px; font-size:14px; }
+    .inv-toast .inv-text{ font-size:13px; color:#444; margin-bottom:10px; line-height:1.4; }
+    .inv-toast .inv-actions{ display:flex; gap:6px; justify-content:flex-end; }
+    .inv-toast button{ padding:6px 10px; font-size:12px; border-radius:8px; }
+    .inv-toast .inv-later{ background:#eee; color:#333; border:1px solid var(--line); }
+    @media (max-width:640px){
+      .inv-toast{ left:12px; right:12px; bottom:12px; max-width:none; }
+    }
+
     .card{
       background:#fff;border:1px solid var(--line);border-radius:14px; padding:16px; margin-top:16px;
       box-shadow: 0 6px 18px rgba(0,0,0,.06);
@@ -184,6 +202,16 @@
         <button class="btn-cancel" id="pinCancel">Annuler</button>
         <button id="pinSubmit">Valider</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Toast inventaire hebdomadaire -->
+  <div id="invToast" class="inv-toast">
+    <div class="inv-title">📋 Inventaire hebdomadaire</div>
+    <div class="inv-text">As-tu fait l'inventaire des stocks cette semaine ?</div>
+    <div class="inv-actions">
+      <button class="inv-later" id="invLater">Plus tard</button>
+      <button id="invDone">Oui, c'est fait ✓</button>
     </div>
   </div>
 
@@ -511,6 +539,58 @@
       }
     }
 
+    // ====== RAPPEL INVENTAIRE HEBDOMADAIRE ======
+    function getWeekKey(date){
+      // Renvoie une clé semaine type "2026-W21" basée sur le lundi de la semaine
+      const d=new Date(date);
+      const monday=getMondayOfWeek(d);
+      const year=monday.getFullYear();
+      // Numéro de semaine ISO
+      const firstJan=new Date(year,0,1);
+      const days=Math.floor((monday - firstJan) / (24*60*60*1000));
+      const week=Math.ceil((days + firstJan.getDay() + 1) / 7);
+      return `${year}-W${String(week).padStart(2,'0')}`;
+    }
+
+    async function checkInventoryReminder(){
+      // Le rappel ne s'affiche que si on est connecté
+      if(!isLoggedIn()) return;
+      // Pas de rappel le weekend
+      if(isWeekendOrExpired()) return;
+
+      const currentWeek=getWeekKey(new Date());
+      try{
+        const {data,error}=await sb.from('inventory_check')
+          .select('week_key')
+          .eq('week_key',currentWeek)
+          .maybeSingle();
+        if(error){ console.warn('Erreur check inventaire:',error); return; }
+        // Si pas de ligne pour cette semaine → afficher le rappel
+        if(!data){
+          document.getElementById("invToast").classList.add('show');
+        }
+      }catch(e){
+        console.warn('Erreur check inventaire:',e);
+      }
+    }
+
+    async function markInventoryDone(){
+      const currentWeek=getWeekKey(new Date());
+      try{
+        const {error}=await sb.from('inventory_check').insert({
+          week_key: currentWeek
+        });
+        if(error && !error.message.includes('duplicate')){
+          setMsg('err','❌ Erreur enregistrement: '+error.message);
+          return;
+        }
+        document.getElementById("invToast").classList.remove('show');
+        setMsg('ok','✅ Inventaire marqué comme fait pour cette semaine. Merci !');
+      }catch(e){
+        console.warn('Erreur mark inventaire:',e);
+      }
+    }
+
     async function init(){
       // écouteurs UI
       document.getElementById("addBtn").addEventListener('click',addExact);
@@ -567,6 +647,16 @@
       setInterval(loadStock,30000);
       // Vérification périodique de la session (toutes les 5min) pour déconnecter le weekend
       setInterval(updateLoginUI, 5*60*1000);
+
+      // Vérification du rappel inventaire (toutes les heures) et au démarrage
+      setInterval(checkInventoryReminder, 60*60*1000);
+      setTimeout(checkInventoryReminder, 2000); // après 2s pour laisser le site charger
+
+      // Boutons popup inventaire
+      document.getElementById("invLater").addEventListener('click',()=>{
+        document.getElementById("invToast").classList.remove('show');
+      });
+      document.getElementById("invDone").addEventListener('click',markInventoryDone);
 
       window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(checkConnection);});
       window.addEventListener('offline',()=>setStatus('warn','⚠️ Hors ligne'));
