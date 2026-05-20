@@ -514,4 +514,64 @@
     async function init(){
       // écouteurs UI
       document.getElementById("addBtn").addEventListener('click',addExact);
-      document.getE
+      document.getElementById("typeSelect").addEventListener('change',refreshRef);
+      document.getElementById("filterInput").addEventListener('input',applyFilterSort);
+      document.getElementById("sortName").addEventListener('click',()=>{
+        SORT_NAME_ASC=!SORT_NAME_ASC;
+        setActiveChip(document.getElementById("sortName"));
+        document.getElementById("sortName").textContent=SORT_NAME_ASC?"Nom A→Z":"Nom Z→A";
+        applyFilterSort();
+      });
+      document.getElementById("sortQty").addEventListener('click',()=>{
+        SORT_QTY_DESC=!SORT_QTY_DESC;
+        setActiveChip(document.getElementById("sortQty"));
+        document.getElementById("sortQty").textContent=SORT_QTY_DESC?"Stock ⬇︎":"Stock ⬆︎";
+        applyFilterSort();
+      });
+      setActiveChip(document.getElementById("sortName")); // tri par nom au départ
+
+      // Bouton connexion / déconnexion
+      document.getElementById("loginBtn").addEventListener('click',()=>{
+        if(isLoggedIn()){
+          if(confirm('Se déconnecter ?')) { logout(); setMsg('muted','🔒 Déconnecté.'); }
+        }else{
+          openLoginModal();
+        }
+      });
+
+      // Modal PIN
+      document.getElementById("pinCancel").addEventListener('click',closeLoginModal);
+      document.getElementById("pinSubmit").addEventListener('click',trySubmitPin);
+      document.getElementById("pinInput").addEventListener('keydown',(e)=>{
+        if(e.key==='Enter') trySubmitPin();
+        if(e.key==='Escape') closeLoginModal();
+      });
+      // Fermer modal en cliquant sur le fond
+      document.getElementById("modalBg").addEventListener('click',(e)=>{
+        if(e.target.id==='modalBg') closeLoginModal();
+      });
+
+      refreshRef();
+      updateLoginUI(); // état initial des boutons
+
+      // chargements
+      await loadColors().catch(()=>{ /* on continue */ });
+      await loadStock().catch(()=>{ /* on continue */ });
+      await checkConnection();
+
+      // live updates
+      sb.channel('stock_changes')
+        .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
+        .subscribe();
+
+      setInterval(loadStock,30000);
+      // Vérification périodique de la session (toutes les 5min) pour déconnecter le weekend
+      setInterval(updateLoginUI, 5*60*1000);
+
+      window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(checkConnection);});
+      window.addEventListener('offline',()=>setStatus('warn','⚠️ Hors ligne'));
+    }
+    init();
+  </script>
+</body>
+</html>
