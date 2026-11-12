@@ -22,7 +22,6 @@
     header h1{margin:0; font-size:22px; letter-spacing:.2px}
     .logo{height:48px; object-fit:contain; max-width:150px}
 
-    /* Fermob uniquement plus grand */
     #fermobLogo {
       height:72px;
       max-width:220px;
@@ -38,7 +37,6 @@
     .dot{width:10px;height:10px;border-radius:50%;}
     .ok{background:#16a34a}.warn{background:#f59e0b}.bad{background:#ef4444}
 
-    /* Bouton connexion discret en haut à droite */
     .login-btn{
       position:absolute; top:10px; right:12px;
       background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.3);
@@ -49,7 +47,6 @@
     .login-btn:hover{ background:rgba(255,255,255,.25); }
     .login-btn.connected{ background:rgba(22,163,74,.85); border-color:rgba(22,163,74,1); }
 
-    /* Modal PIN */
     .modal-bg{
       position:fixed; inset:0; background:rgba(0,0,0,.5); display:none;
       align-items:center; justify-content:center; z-index:100;
@@ -72,7 +69,6 @@
     }
     .modal .err{ color:var(--danger); font-size:13px; margin-bottom:8px; min-height:1.2em; }
 
-    /* Toast inventaire discret en bas à droite */
     .inv-toast{
       position:fixed; bottom:20px; right:20px; z-index:90;
       background:#fff; border:1px solid var(--line); border-left:4px solid var(--brand);
@@ -103,13 +99,11 @@
     button:hover:not(:disabled){background:var(--brand-600); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(76,114,51,.18);}
     button:active:not(:disabled){transform: translateY(0); box-shadow:none;}
 
-    /* État désactivé pour les boutons quand pas connecté */
     button:disabled, input:disabled, select:disabled{
       opacity:0.5; cursor:not-allowed; background:#ccc; border-color:#bbb;
     }
     button:disabled:hover{ transform:none; box-shadow:none; }
 
-    /* Tableau */
     table{
       width:100%;border-collapse:separate;border-spacing:0;background:#fff;
       border:1px solid var(--line); border-radius:12px; overflow:hidden;
@@ -130,17 +124,7 @@
       box-shadow: inset 0 0 0 1px rgba(255,255,255,.5);
       vertical-align:-2px;
     }
-    tbody td:nth-child(2){
-      font-weight:600;
-      background:#eef5e9;
-      color:#355a22;
-      border-radius:999px;
-      padding:6px 10px;
-      display:inline-block;
-      margin:2px 0;
-    }
 
-    /* Barre outils du tableau */
     .tools{
       display:flex; gap:8px; align-items:center; justify-content:space-between;
       margin:6px 0 10px;
@@ -152,7 +136,6 @@
     }
     .chip.active{ background:var(--brand); color:#fff; }
 
-    /* Totaux */
     .totals{
       margin-top:10px; font-weight:600; color:#355a22;
       display:flex; gap:12px; flex-wrap:wrap;
@@ -161,7 +144,14 @@
       background:#eef5e9; border:1px solid #dbe8d8; border-radius:999px; padding:6px 10px;
     }
 
-    /* Mobile */
+    /* Badge pour distinguer Pied / Bouchon dans le formulaire */
+    .kind-badge{
+      display:inline-block; padding:4px 10px; border-radius:999px;
+      font-size:12px; font-weight:600; margin-left:6px;
+    }
+    .kind-badge.pied{ background:#eef5e9; color:#355a22; border:1px solid #dbe8d8; }
+    .kind-badge.bouchon{ background:#fef3e9; color:#8a4a1a; border:1px solid #f0d9bd; }
+
     @media (max-width:640px){
       header h1{ font-size:18px; }
       .wrap{ padding:12px; }
@@ -191,7 +181,7 @@
     <button id="loginBtn" class="login-btn" title="Se connecter pour modifier">🔒 Connexion</button>
   </header>
 
-  <!-- Modal de connexion PIN -->
+  <!-- Modal PIN -->
   <div id="modalBg" class="modal-bg">
     <div class="modal">
       <h2>🔒 Connexion</h2>
@@ -216,24 +206,24 @@
   </div>
 
   <div class="wrap">
+    <!-- Formulaire d'ajout unique -->
     <div class="card">
       <div class="row" style="display:flex;gap:12px;flex-wrap:wrap;align-items:end">
+        <div style="flex:1 1 200px">
+          <label>Catégorie</label><br />
+          <select id="kindSelect">
+            <option value="pied">🦵 Pied universel</option>
+            <option value="bouchon">🔘 Bouchon de parasol</option>
+          </select>
+        </div>
+
         <div style="flex:1 1 260px">
           <label>Couleur</label><br />
           <select id="colorSelect"></select>
         </div>
 
-        <div style="flex:1 1 220px">
-          <label>Type de pied</label><br />
-          <select id="typeSelect">
-            <option value="Petite table">Petite table</option>
-            <option value="Grande table">Grande table</option>
-          </select>
-          <div id="refBox" class="ref" style="font-size:12px;color:#666;margin-top:6px"></div>
-        </div>
-
         <div>
-          <label>Quantité de pieds</label><br />
+          <label>Quantité</label><br />
           <input id="qtyInput" type="number" min="0" inputmode="numeric" placeholder="ex : 12" style="width:140px" />
         </div>
 
@@ -245,10 +235,11 @@
       <p class="msg muted" style="margin:6px 0 0;color:#666">"Ajouter" met le stock <b>exact</b> (le site calcule la différence automatiquement).</p>
     </div>
 
+    <!-- Tableau Pieds universels -->
     <div class="card">
       <div class="tools">
         <div class="left">
-          <h3 style="margin:0">Stock par couleur et type</h3>
+          <h3 style="margin:0">🦵 Stock Pieds universels</h3>
         </div>
         <div class="right">
           <input id="filterInput" type="text" placeholder="Rechercher une couleur…" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;width:200px">
@@ -258,24 +249,43 @@
       </div>
 
       <table>
-        <thead><tr><th>Couleur</th><th>Type</th><th>Stock</th></tr></thead>
+        <thead><tr><th>Couleur</th><th>Stock</th></tr></thead>
         <tbody id="stockBody"></tbody>
       </table>
 
       <div id="totals" class="totals" aria-live="polite"></div>
     </div>
+
+    <!-- Tableau Bouchons de parasol -->
+    <div class="card">
+      <div class="tools">
+        <div class="left">
+          <h3 style="margin:0">🔘 Stock Bouchons de parasol</h3>
+        </div>
+        <div class="right">
+          <input id="filterInputPlugs" type="text" placeholder="Rechercher une couleur…" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;width:200px">
+          <button id="sortNamePlugs" class="chip" title="Trier par nom">Nom A→Z</button>
+          <button id="sortQtyPlugs" class="chip" title="Trier par stock">Stock ⬇︎</button>
+        </div>
+      </div>
+
+      <table>
+        <thead><tr><th>Couleur</th><th>Stock</th></tr></thead>
+        <tbody id="plugsBody"></tbody>
+      </table>
+
+      <div id="totalsPlugs" class="totals" aria-live="polite"></div>
+    </div>
   </div>
 
-  <!-- Lib Supabase en global -->
   <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
 
-  <!-- Script principal en module -->
   <script type="module">
     // ====== CONFIG PIN ======
-    const APP_PIN = "2669"; // Code PIN pour modifier le stock
+    const APP_PIN = "2669";
     const SESSION_KEY = "fermob_session_v1";
 
-    // ====== Import robuste de colors.js (avec fallback) ======
+    // ====== Import robuste de colors.js ======
     let COLOR_HEX = {};
     try {
       const mod = await import('./colors.js?v=' + Date.now());
@@ -285,30 +295,24 @@
       COLOR_HEX = {};
     }
 
-    // Anti-cache logos
     const versionParam='?v='+new Date().getTime();
     document.getElementById('fermobLogo').src='./fermob.png'+versionParam;
     document.getElementById('rodetLogo').src='./rodet.png'+versionParam;
 
-    // Supabase
     const SUPABASE_URL="https://ytoxpennisgfzdtpxmgh.supabase.co";
     const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl0b3hwZW5uaXNnZnpkdHB4bWdoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTgwMjc4OTIsImV4cCI6MjA3MzYwMzg5Mn0._FAylBUlh_Xr53z-KOJTy4HwBJgw1tMCxuCj146z3bM";
     const sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
 
-    // Helpers
-    const TYPE_REFS={"Petite table":"14x8 / 8x8","Grande table":"165x10 / 207x10"};
     const $=sel=>document.querySelector(sel);
     const norm=s=>(s||"").normalize('NFKC').toLowerCase().replace(/\s+/g,' ').trim();
     const titleCase=s=>(s||"").toLowerCase().replace(/\S+/g,w=>w.charAt(0).toUpperCase()+w.slice(1));
     function setMsg(kind,txt){const m=$("#msg");m.className="msg "+kind;m.textContent=txt;}
     function setStatus(kind,text){const d=$("#statusDot"),t=$("#statusText");d.className="dot "+(kind==="ok"?"ok":kind==="bad"?"bad":"warn");t.textContent=text;}
-    function refreshRef(){const t=$("#typeSelect").value;$("#refBox").textContent="Réf : "+(TYPE_REFS[t]||"-");}
 
-    // ====== GESTION SESSION PIN ======
-    // Une session est valide pendant la semaine en cours (lundi 00:00 → vendredi 23:59)
+    // ====== SESSION PIN ======
     function isWeekendOrExpired(){
       const now=new Date();
-      const day=now.getDay(); // 0=dimanche, 6=samedi
+      const day=now.getDay();
       return (day===0 || day===6);
     }
 
@@ -318,12 +322,9 @@
       try{
         const s=JSON.parse(raw);
         if(!s.loggedAt) return false;
-        // Vérifier qu'on est dans la même semaine que la connexion
         const now=new Date();
         const logged=new Date(s.loggedAt);
-        // Si on est weekend → déconnexion
         if(isWeekendOrExpired()) { localStorage.removeItem(SESSION_KEY); return false; }
-        // Si on a changé de semaine (lundi suivant) → déconnexion
         const weekStart=getMondayOfWeek(now);
         if(logged < weekStart) { localStorage.removeItem(SESSION_KEY); return false; }
         return true;
@@ -333,7 +334,7 @@
     function getMondayOfWeek(date){
       const d=new Date(date);
       const day=d.getDay();
-      const diff=d.getDate() - day + (day===0 ? -6 : 1); // ajuste pour avoir lundi
+      const diff=d.getDate() - day + (day===0 ? -6 : 1);
       d.setDate(diff);
       d.setHours(0,0,0,0);
       return d;
@@ -361,11 +362,10 @@
         btn.classList.remove('connected');
         btn.title="Se connecter pour modifier";
       }
-      // Activer/désactiver les contrôles d'édition
       $("#addBtn").disabled=!logged;
       $("#qtyInput").disabled=!logged;
       $("#colorSelect").disabled=!logged;
-      $("#typeSelect").disabled=!logged;
+      $("#kindSelect").disabled=!logged;
     }
 
     function openLoginModal(){
@@ -421,6 +421,7 @@
       return hashColor(k);
     }
 
+    // ====== PIEDS ======
     let FULL_ROWS=[]; let VIEW_ROWS=[];
     let SORT_NAME_ASC=true; let SORT_QTY_DESC=true;
 
@@ -450,25 +451,15 @@
         const hex=hexForDisplay(r.color);
         const tr=document.createElement('tr');
         tr.innerHTML=`<td><span class="swatch" style="background:${hex}"></span>${titleCase(r.color)}</td>
-                      <td>${r.type||'Grande table'}</td>
                       <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
         tb.appendChild(tr);
       });
-      setMsg('ok',rows.length?"Stock chargé.":"Aucune ligne enregistrée.");
     }
 
     function renderTotals(rows){
-      let petite=0, grande=0, total=0;
-      for(const r of rows){
-        const q=r.qty_current??0;
-        total+=q;
-        if((r.type||'Grande table')==='Petite table') petite+=q; else grande+=q;
-      }
-      $("#totals").innerHTML=`
-        <div class="pill">Petite table : ${petite}</div>
-        <div class="pill">Grande table : ${grande}</div>
-        <div class="pill">Total : ${total}</div>
-      `;
+      let total=0;
+      for(const r of rows){ total+=(r.qty_current??0); }
+      $("#totals").innerHTML=`<div class="pill">Total pieds : ${total}</div>`;
     }
 
     async function loadStock(){
@@ -479,8 +470,61 @@
       applyFilterSort();
     }
 
+    // ====== BOUCHONS ======
+    let FULL_PLUGS=[]; let VIEW_PLUGS=[];
+    let SORT_NAME_PLUGS_ASC=true; let SORT_QTY_PLUGS_DESC=true;
+
+    function applyFilterSortPlugs(){
+      const q=norm($("#filterInputPlugs").value);
+      VIEW_PLUGS = FULL_PLUGS.filter(r => !q || norm(r.color).includes(q));
+      if($("#sortQtyPlugs").classList.contains('active')){
+        VIEW_PLUGS.sort((a,b)=> (b.qty_current??0) - (a.qty_current??0));
+        if(!SORT_QTY_PLUGS_DESC) VIEW_PLUGS.reverse();
+      }else{
+        VIEW_PLUGS.sort((a,b)=> norm(a.color).localeCompare(norm(b.color)));
+        if(!SORT_NAME_PLUGS_ASC) VIEW_PLUGS.reverse();
+      }
+      renderPlugsTable(VIEW_PLUGS);
+      renderPlugsTotals(VIEW_PLUGS);
+    }
+
+    function setActiveChipPlugs(btn){
+      $("#sortNamePlugs").classList.remove('active');
+      $("#sortQtyPlugs").classList.remove('active');
+      btn.classList.add('active');
+    }
+
+    function renderPlugsTable(rows){
+      const tb=$("#plugsBody"); tb.innerHTML='';
+      if(rows.length===0){
+        tb.innerHTML=`<tr><td colspan="2" style="text-align:center;color:#999;padding:20px">Aucun bouchon enregistré. Ajoute-en via le formulaire ci-dessus.</td></tr>`;
+        return;
+      }
+      rows.forEach(r=>{
+        const hex=hexForDisplay(r.color);
+        const tr=document.createElement('tr');
+        tr.innerHTML=`<td><span class="swatch" style="background:${hex}"></span>${titleCase(r.color)}</td>
+                      <td ${r.qty_current<2?'class="low"':''}>${r.qty_current}</td>`;
+        tb.appendChild(tr);
+      });
+    }
+
+    function renderPlugsTotals(rows){
+      let total=0;
+      for(const r of rows){ total+=(r.qty_current??0); }
+      $("#totalsPlugs").innerHTML=`<div class="pill">Total bouchons : ${total}</div>`;
+    }
+
+    async function loadPlugs(){
+      const {data,error}=await sb.from('v_plugs_stock').select('*');
+      if(error){console.warn("Lecture bouchons: "+error.message); return;}
+      const rows=(data||[]).filter(r=>(r.qty_current??0)>0);
+      FULL_PLUGS=rows.slice();
+      applyFilterSortPlugs();
+    }
+
+    // ====== AJOUT (Pied OU Bouchon) ======
     async function addExact(){
-      // Vérification connexion
       if(!isLoggedIn()){
         setMsg('err',"🔒 Connecte-toi pour modifier le stock.");
         openLoginModal();
@@ -488,44 +532,75 @@
       }
 
       setMsg('muted',"⏳ Traitement…");
+      const kind = $("#kindSelect").value; // "pied" ou "bouchon"
       const colorId=Number($("#colorSelect").value);
       const colorName=$("#colorSelect").selectedOptions[0]?.textContent||'';
-      const type=$("#typeSelect").value;
       const target=Number($("#qtyInput").value);
       if(!Number.isFinite(colorId)) return setMsg('err',"❌ Choisis une couleur.");
-      if(!type) return setMsg('err',"❌ Choisis un type.");
       if(!Number.isFinite(target)||target<0) return setMsg('err',"❌ Quantité (≥ 0).");
 
-      const {data:cur,error:cerr}=await sb.from('legs_stock').select('qty').eq('color_id',colorId).eq('type',type).maybeSingle();
+      if(kind==='pied'){
+        await addPied(colorId, colorName, target);
+      } else {
+        await addBouchon(colorId, colorName, target);
+      }
+    }
+
+    async function addPied(colorId, colorName, target){
+      const {data:cur,error:cerr}=await sb.from('legs_stock').select('qty').eq('color_id',colorId).eq('type','Pied universel').maybeSingle();
       if(cerr){setMsg('err',"❌ Lecture stock actuel: "+cerr.message);return;}
       const current=cur?.qty??0; const delta=target-current;
-      if(delta===0){setMsg('ok',`✅ « ${colorName} / ${type} » est déjà à ${target}.`);return;}
+      if(delta===0){setMsg('ok',`✅ Pied « ${colorName} » est déjà à ${target}.`);return;}
 
-      // Confirmation pour gros écarts (sécurité anti-erreur de frappe)
       if(Math.abs(delta) >= 20){
-        const ok = confirm(`⚠️ Attention, gros changement !\n\n${colorName} / ${type}\nStock actuel : ${current}\nNouveau stock : ${target}\nÉcart : ${delta > 0 ? '+' : ''}${delta}\n\nConfirmer ?`);
+        const ok = confirm(`⚠️ Attention, gros changement !\n\nPied ${colorName}\nStock actuel : ${current}\nNouveau stock : ${target}\nÉcart : ${delta > 0 ? '+' : ''}${delta}\n\nConfirmer ?`);
         if(!ok){ setMsg('warn','Modification annulée.'); return; }
       }
 
-      const {error:rerr}=await sb.rpc('apply_move',{p_color_id:colorId,p_delta:delta,p_note:`MAJ ${current}→${target}`,p_type:type});
+      const {error:rerr}=await sb.rpc('apply_move',{p_color_id:colorId,p_delta:delta,p_note:`MAJ ${current}→${target}`,p_type:'Pied universel'});
       if(rerr){setMsg('err',"❌ Écriture stock: "+rerr.message);return;}
 
-      // Enregistrement dans l'historique
       try {
         await sb.from('legs_history').insert({
           color_id: colorId,
           color_name: colorName,
-          type: type,
+          type: 'Pied universel',
           qty_before: current,
           qty_after: target,
           delta: delta
         });
-      } catch(e){
-        console.warn('Erreur enregistrement historique:', e);
+      } catch(e){ console.warn('Erreur historique pied:', e); }
+
+      setMsg('ok',`✅ Pied « ${colorName} » : ${current} → ${target}`);
+      $("#qtyInput").value=""; await loadStock();
+    }
+
+    async function addBouchon(colorId, colorName, target){
+      const {data:cur,error:cerr}=await sb.from('plugs_stock').select('qty').eq('color_id',colorId).maybeSingle();
+      if(cerr){setMsg('err',"❌ Lecture stock bouchon: "+cerr.message);return;}
+      const current=cur?.qty??0; const delta=target-current;
+      if(delta===0){setMsg('ok',`✅ Bouchon « ${colorName} » est déjà à ${target}.`);return;}
+
+      if(Math.abs(delta) >= 20){
+        const ok = confirm(`⚠️ Attention, gros changement !\n\nBouchon ${colorName}\nStock actuel : ${current}\nNouveau stock : ${target}\nÉcart : ${delta > 0 ? '+' : ''}${delta}\n\nConfirmer ?`);
+        if(!ok){ setMsg('warn','Modification annulée.'); return; }
       }
 
-      setMsg('ok',`✅ « ${colorName} / ${type} » : ${current} → ${target}`);
-      $("#qtyInput").value=""; await loadStock();
+      const {error:rerr}=await sb.rpc('apply_plug_move',{p_color_id:colorId,p_delta:delta,p_note:`MAJ ${current}→${target}`});
+      if(rerr){setMsg('err',"❌ Écriture stock bouchon: "+rerr.message);return;}
+
+      try {
+        await sb.from('plugs_history').insert({
+          color_id: colorId,
+          color_name: colorName,
+          qty_before: current,
+          qty_after: target,
+          delta: delta
+        });
+      } catch(e){ console.warn('Erreur historique bouchon:', e); }
+
+      setMsg('ok',`✅ Bouchon « ${colorName} » : ${current} → ${target}`);
+      $("#qtyInput").value=""; await loadPlugs();
     }
 
     async function checkConnection(){
@@ -539,13 +614,11 @@
       }
     }
 
-    // ====== RAPPEL INVENTAIRE HEBDOMADAIRE ======
+    // ====== RAPPEL INVENTAIRE ======
     function getWeekKey(date){
-      // Renvoie une clé semaine type "2026-W21" basée sur le lundi de la semaine
       const d=new Date(date);
       const monday=getMondayOfWeek(d);
       const year=monday.getFullYear();
-      // Numéro de semaine ISO
       const firstJan=new Date(year,0,1);
       const days=Math.floor((monday - firstJan) / (24*60*60*1000));
       const week=Math.ceil((days + firstJan.getDay() + 1) / 7);
@@ -553,48 +626,34 @@
     }
 
     async function checkInventoryReminder(){
-      // Le rappel ne s'affiche que si on est connecté
       if(!isLoggedIn()) return;
-      // Pas de rappel le weekend
       if(isWeekendOrExpired()) return;
-
       const currentWeek=getWeekKey(new Date());
       try{
         const {data,error}=await sb.from('inventory_check')
-          .select('week_key')
-          .eq('week_key',currentWeek)
-          .maybeSingle();
+          .select('week_key').eq('week_key',currentWeek).maybeSingle();
         if(error){ console.warn('Erreur check inventaire:',error); return; }
-        // Si pas de ligne pour cette semaine → afficher le rappel
-        if(!data){
-          document.getElementById("invToast").classList.add('show');
-        }
-      }catch(e){
-        console.warn('Erreur check inventaire:',e);
-      }
+        if(!data){ document.getElementById("invToast").classList.add('show'); }
+      }catch(e){ console.warn('Erreur check inventaire:',e); }
     }
 
     async function markInventoryDone(){
       const currentWeek=getWeekKey(new Date());
       try{
-        const {error}=await sb.from('inventory_check').insert({
-          week_key: currentWeek
-        });
+        const {error}=await sb.from('inventory_check').insert({ week_key: currentWeek });
         if(error && !error.message.includes('duplicate')){
           setMsg('err','❌ Erreur enregistrement: '+error.message);
           return;
         }
         document.getElementById("invToast").classList.remove('show');
         setMsg('ok','✅ Inventaire marqué comme fait pour cette semaine. Merci !');
-      }catch(e){
-        console.warn('Erreur mark inventaire:',e);
-      }
+      }catch(e){ console.warn('Erreur mark inventaire:',e); }
     }
 
     async function init(){
-      // écouteurs UI
       document.getElementById("addBtn").addEventListener('click',addExact);
-      document.getElementById("typeSelect").addEventListener('change',refreshRef);
+
+      // Pieds — filtres et tris
       document.getElementById("filterInput").addEventListener('input',applyFilterSort);
       document.getElementById("sortName").addEventListener('click',()=>{
         SORT_NAME_ASC=!SORT_NAME_ASC;
@@ -608,7 +667,23 @@
         document.getElementById("sortQty").textContent=SORT_QTY_DESC?"Stock ⬇︎":"Stock ⬆︎";
         applyFilterSort();
       });
-      setActiveChip(document.getElementById("sortName")); // tri par nom au départ
+      setActiveChip(document.getElementById("sortName"));
+
+      // Bouchons — filtres et tris
+      document.getElementById("filterInputPlugs").addEventListener('input',applyFilterSortPlugs);
+      document.getElementById("sortNamePlugs").addEventListener('click',()=>{
+        SORT_NAME_PLUGS_ASC=!SORT_NAME_PLUGS_ASC;
+        setActiveChipPlugs(document.getElementById("sortNamePlugs"));
+        document.getElementById("sortNamePlugs").textContent=SORT_NAME_PLUGS_ASC?"Nom A→Z":"Nom Z→A";
+        applyFilterSortPlugs();
+      });
+      document.getElementById("sortQtyPlugs").addEventListener('click',()=>{
+        SORT_QTY_PLUGS_DESC=!SORT_QTY_PLUGS_DESC;
+        setActiveChipPlugs(document.getElementById("sortQtyPlugs"));
+        document.getElementById("sortQtyPlugs").textContent=SORT_QTY_PLUGS_DESC?"Stock ⬇︎":"Stock ⬆︎";
+        applyFilterSortPlugs();
+      });
+      setActiveChipPlugs(document.getElementById("sortNamePlugs"));
 
       // Bouton connexion / déconnexion
       document.getElementById("loginBtn").addEventListener('click',()=>{
@@ -626,39 +701,39 @@
         if(e.key==='Enter') trySubmitPin();
         if(e.key==='Escape') closeLoginModal();
       });
-      // Fermer modal en cliquant sur le fond
       document.getElementById("modalBg").addEventListener('click',(e)=>{
         if(e.target.id==='modalBg') closeLoginModal();
       });
 
-      refreshRef();
-      updateLoginUI(); // état initial des boutons
+      updateLoginUI();
 
-      // chargements
-      await loadColors().catch(()=>{ /* on continue */ });
-      await loadStock().catch(()=>{ /* on continue */ });
+      await loadColors().catch(()=>{});
+      await loadStock().catch(()=>{});
+      await loadPlugs().catch(()=>{});
       await checkConnection();
 
-      // live updates
+      // Live updates sur pieds
       sb.channel('stock_changes')
         .on('postgres_changes',{event:'*',schema:'public',table:'legs_stock'},()=>loadStock())
         .subscribe();
 
+      // Live updates sur bouchons
+      sb.channel('plugs_changes')
+        .on('postgres_changes',{event:'*',schema:'public',table:'plugs_stock'},()=>loadPlugs())
+        .subscribe();
+
       setInterval(loadStock,30000);
-      // Vérification périodique de la session (toutes les 5min) pour déconnecter le weekend
+      setInterval(loadPlugs,30000);
       setInterval(updateLoginUI, 5*60*1000);
-
-      // Vérification du rappel inventaire (toutes les heures) et au démarrage
       setInterval(checkInventoryReminder, 60*60*1000);
-      setTimeout(checkInventoryReminder, 2000); // après 2s pour laisser le site charger
+      setTimeout(checkInventoryReminder, 2000);
 
-      // Boutons popup inventaire
       document.getElementById("invLater").addEventListener('click',()=>{
         document.getElementById("invToast").classList.remove('show');
       });
       document.getElementById("invDone").addEventListener('click',markInventoryDone);
 
-      window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(checkConnection);});
+      window.addEventListener('online',()=>{setStatus('warn','⏳ Reconnexion…');loadStock().then(()=>loadPlugs()).then(checkConnection);});
       window.addEventListener('offline',()=>setStatus('warn','⚠️ Hors ligne'));
     }
     init();
