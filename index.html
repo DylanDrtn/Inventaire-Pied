@@ -136,6 +136,16 @@
     }
     .chip.active{ background:var(--brand); color:#fff; }
 
+    .chip.reset-btn{
+      background:#fdecec; color:#b00020; border-color:#b00020;
+    }
+    .chip.reset-btn:hover:not(:disabled){
+      background:#b00020; color:#fff;
+    }
+    .chip.reset-btn:disabled{
+      opacity:.4; cursor:not-allowed;
+    }
+
     .totals{
       margin-top:10px; font-weight:600; color:#355a22;
       display:flex; gap:12px; flex-wrap:wrap;
@@ -245,6 +255,7 @@
           <input id="filterInput" type="text" placeholder="Rechercher une couleur…" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;width:200px">
           <button id="sortName" class="chip" title="Trier par nom">Nom A→Z</button>
           <button id="sortQty" class="chip" title="Trier par stock">Stock ⬇︎</button>
+          <button id="resetLegs" class="chip reset-btn" title="Remettre tout à zéro">🗑️ Reset</button>
         </div>
       </div>
 
@@ -266,6 +277,7 @@
           <input id="filterInputPlugs" type="text" placeholder="Rechercher une couleur…" style="padding:8px 10px;border:1px solid var(--line);border-radius:10px;width:200px">
           <button id="sortNamePlugs" class="chip" title="Trier par nom">Nom A→Z</button>
           <button id="sortQtyPlugs" class="chip" title="Trier par stock">Stock ⬇︎</button>
+          <button id="resetPlugs" class="chip reset-btn" title="Remettre tout à zéro">🗑️ Reset</button>
         </div>
       </div>
 
@@ -366,6 +378,8 @@
       $("#qtyInput").disabled=!logged;
       $("#colorSelect").disabled=!logged;
       $("#kindSelect").disabled=!logged;
+      const rl=$("#resetLegs"); if(rl) rl.disabled=!logged;
+      const rp=$("#resetPlugs"); if(rp) rp.disabled=!logged;
     }
 
     function openLoginModal(){
@@ -637,6 +651,79 @@
       }catch(e){ console.warn('Erreur check inventaire:',e); }
     }
 
+    // ====== RESET (vider tout un tableau) ======
+    async function resetAllLegs(){
+      if(!isLoggedIn()){
+        setMsg('err',"🔒 Connecte-toi pour faire un reset.");
+        openLoginModal();
+        return;
+      }
+      const ok = confirm(`⚠️ ATTENTION\n\nTu vas remettre à ZÉRO le stock de TOUS les pieds.\n\nCette action est utile pour refaire un inventaire complet.\nL'historique garde une trace des anciennes valeurs.\n\nConfirmer ?`);
+      if(!ok){ setMsg('warn','Reset annulé.'); return; }
+
+      setMsg('muted','⏳ Reset en cours…');
+      try {
+        // Historiser chaque ligne avant reset
+        for(const r of FULL_ROWS){
+          if((r.qty_current??0) > 0){
+            await sb.from('legs_history').insert({
+              color_id: r.color_id,
+              color_name: r.color,
+              type: 'Pied universel',
+              qty_before: r.qty_current,
+              qty_after: 0,
+              delta: -r.qty_current
+            });
+          }
+        }
+        // Reset : mettre toutes les quantités à 0
+        const {error} = await sb.from('legs_stock')
+          .update({ qty: 0 })
+          .eq('type','Pied universel')
+          .neq('qty', 0);
+        if(error){ setMsg('err','❌ Reset pieds: '+error.message); return; }
+        setMsg('ok','✅ Stock pieds remis à zéro. Tu peux refaire l\'inventaire.');
+        await loadStock();
+      } catch(e){
+        setMsg('err','❌ Erreur reset: '+e.message);
+      }
+    }
+
+    async function resetAllPlugs(){
+      if(!isLoggedIn()){
+        setMsg('err',"🔒 Connecte-toi pour faire un reset.");
+        openLoginModal();
+        return;
+      }
+      const ok = confirm(`⚠️ ATTENTION\n\nTu vas remettre à ZÉRO le stock de TOUS les bouchons.\n\nCette action est utile pour refaire un inventaire complet.\nL'historique garde une trace des anciennes valeurs.\n\nConfirmer ?`);
+      if(!ok){ setMsg('warn','Reset annulé.'); return; }
+
+      setMsg('muted','⏳ Reset en cours…');
+      try {
+        // Historiser chaque ligne avant reset
+        for(const r of FULL_PLUGS){
+          if((r.qty_current??0) > 0){
+            await sb.from('plugs_history').insert({
+              color_id: r.color_id,
+              color_name: r.color,
+              qty_before: r.qty_current,
+              qty_after: 0,
+              delta: -r.qty_current
+            });
+          }
+        }
+        // Reset : mettre toutes les quantités à 0
+        const {error} = await sb.from('plugs_stock')
+          .update({ qty: 0 })
+          .neq('qty', 0);
+        if(error){ setMsg('err','❌ Reset bouchons: '+error.message); return; }
+        setMsg('ok','✅ Stock bouchons remis à zéro. Tu peux refaire l\'inventaire.');
+        await loadPlugs();
+      } catch(e){
+        setMsg('err','❌ Erreur reset: '+e.message);
+      }
+    }
+
     async function markInventoryDone(){
       const currentWeek=getWeekKey(new Date());
       try{
@@ -684,6 +771,10 @@
         applyFilterSortPlugs();
       });
       setActiveChipPlugs(document.getElementById("sortNamePlugs"));
+
+      // Boutons Reset
+      document.getElementById("resetLegs").addEventListener('click',resetAllLegs);
+      document.getElementById("resetPlugs").addEventListener('click',resetAllPlugs);
 
       // Bouton connexion / déconnexion
       document.getElementById("loginBtn").addEventListener('click',()=>{
